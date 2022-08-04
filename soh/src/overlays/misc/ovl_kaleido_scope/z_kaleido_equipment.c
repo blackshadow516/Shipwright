@@ -583,10 +583,20 @@ void KaleidoScope_DrawEquipment(GlobalContext* globalCtx) {
                     sEquipTimer = 10;
                 } else if (CVar_GetS32("gAssignableTunicsAndBoots", 0) != 0) {
                     // Only allow assigning tunic and boots to c-buttons
-                    if (pauseCtx->cursorY[PAUSE_EQUIP] > 1) {
+                    // Okay but what if we added shields
+                    if (pauseCtx->cursorY[PAUSE_EQUIP] > 0) {
                         if (CHECK_OWNED_EQUIP(pauseCtx->cursorY[PAUSE_EQUIP], pauseCtx->cursorX[PAUSE_EQUIP] - 1)) {
                             u16 slot = 0;
                             switch (cursorItem) {
+                                case ITEM_SHIELD_DEKU:
+                                    slot = SLOT_SHIELD_DEKU;
+                                    break;
+                                case ITEM_SHIELD_HYLIAN:
+                                    slot = SLOT_SHIELD_HYLIAN;
+                                    break;
+                                case ITEM_SHIELD_MIRROR:
+                                    slot = SLOT_SHIELD_MIRROR;
+                                    break;
                                 case ITEM_TUNIC_KOKIRI:
                                     slot = SLOT_TUNIC_KOKIRI;
                                     break;

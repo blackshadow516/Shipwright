@@ -2872,7 +2872,14 @@ void func_80835F44(GlobalContext* globalCtx, Player* this, s32 item) {
             }
 
             if (actionParam >= PLAYER_AP_SHIELD_DEKU) {
-                // Changing shields through action commands is unimplemented
+                u16 shieldValue = actionParam - PLAYER_AP_SHIELD_DEKU + 1;
+                if (CUR_EQUIP_VALUE(EQUIP_SHIELD) == shieldValue) {
+                    Inventory_ChangeEquipment(EQUIP_SHIELD, PLAYER_SHIELD_DEKU + 1);
+                } else {
+                    Inventory_ChangeEquipment(EQUIP_SHIELD, shieldValue);
+                }
+                Player_SetEquipmentData(globalCtx, this);
+                func_808328EC(this, NA_SE_PL_CHANGE_ARMS);
                 return;
             }
 

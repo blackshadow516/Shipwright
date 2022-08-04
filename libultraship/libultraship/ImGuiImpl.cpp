@@ -1146,8 +1146,8 @@ namespace SohImGui {
 
                     EnhancementCheckbox("Visual Stone of Agony", "gVisualAgony");
                     Tooltip("Displays an icon and plays a sound when Stone of Agony should be activated, for those without rumble");
-                    EnhancementCheckbox("Assignable Tunics and Boots", "gAssignableTunicsAndBoots");
-                    Tooltip("Allows equipping the tunic and boots to c-buttons");
+                    EnhancementCheckbox("Assignable Shields, Tunics, & Boots", "gAssignableTunicsAndBoots");
+                    Tooltip("Allows equipping the shield, tunic, and boots to c-buttons");
                     EnhancementCheckbox("Equipment Toggle", "gEquipmentCanBeRemoved");
                     Tooltip("Allows equipment to be removed by toggling it off on\nthe equipment subscreen.");
                     EnhancementCheckbox("Link's Cow in Both Time Periods", "gCowOfTime");
@@ -1160,6 +1160,8 @@ namespace SohImGui {
                     Tooltip("Injects Golden Skulltula total count in pickup messages");
                     EnhancementCheckbox("Pull grave during the day", "gDayGravePull");
                     Tooltip("Allows graves to be pulled when child during the day");
+                    EnhancementCheckbox("Respawn with full Health", "gFullHealthSpawn");
+                    Tooltip("Respawn with full health instead of 3 hearts");
                     ImGui::EndMenu();
                 }
 
