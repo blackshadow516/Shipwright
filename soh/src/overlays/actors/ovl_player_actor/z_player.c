@@ -6097,7 +6097,9 @@ void func_8083DFE0(Player* this, f32* arg1, s16* arg2) {
         if (CVar_GetS32("gMMBunnyHood", 0) != 0 && this->currentMask == PLAYER_MASK_BUNNY) {
             maxSpeed *= 1.5f;
         }
-        this->linearVelocity = CLAMP(this->linearVelocity, -maxSpeed, maxSpeed);
+        if (CVar_GetS32("gUncappedLinkSpeed", 0) == 0) {
+            this->linearVelocity = CLAMP(this->linearVelocity, -maxSpeed, maxSpeed); //Only Cap Link's Speed if the Cheat is Disabled
+        }
     }
 
     if (ABS(yawDiff) > 0x6000) {
@@ -7728,6 +7730,9 @@ void func_80842180(Player* this, GlobalContext* globalCtx) {
         if (!func_8083C484(this, &sp2C, &sp2A)) {
             if (CVar_GetS32("gMMBunnyHood", 0) != 0 && this->currentMask == PLAYER_MASK_BUNNY) {
                 sp2C *= 1.5f;
+            }
+            if (CVar_GetS32("gUncappedLinkSpeed", 0) != 0) {
+                sp2C *= 5000000000000000.0f; //Virtually Uncapped Speed
             }
             func_8083DF68(this, sp2C, sp2A);
             func_8083DDC8(this, globalCtx);

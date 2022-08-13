@@ -1453,6 +1453,8 @@ namespace SohImGui {
                 Tooltip("This allows you to put up your shield with any two-handed weapon in hand\nexcept for Deku Sticks");
                 EnhancementCheckbox("Time Sync", "gTimeSync");
                 Tooltip("This syncs the ingame time with the real world time");
+                EnhancementCheckbox("Uncapped Speed", "gUncappedLinkSpeed");
+                Tooltip("Raises's Link's maximum walking speed to a point where it's essentially uncapped");
 
                 {
                     static int32_t betaQuestEnabled = CVar_GetS32("gEnableBetaQuest", 0);
