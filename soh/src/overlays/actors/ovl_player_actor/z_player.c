@@ -1899,19 +1899,17 @@ void func_80834298(Player* this, GlobalContext* globalCtx) {
     }
 }
 
-s32 func_80834380(GlobalContext* globalCtx, Player* this, s32* itemPtr, s32* typePtr) {
-    if (LINK_IS_ADULT) {
-        *itemPtr = ITEM_BOW;
-        if (this->stateFlags1 & PLAYER_STATE1_23) {
-            *typePtr = ARROW_NORMAL_HORSE;
-        }
-        else {
-            *typePtr = this->heldItemActionParam - 6;
-        }
-    }
-    else {
-        *itemPtr = ITEM_SLINGSHOT;
-        *typePtr = ARROW_SEED;
+s32 func_80834380( GlobalContext* globalCtx, Player* this, s32* itemPtr, s32* typePtr) { // something having to do with setting Link's item and projectile when using slingshot/bow
+
+    *itemPtr = (this->heldItemActionParam == PLAYER_AP_SLINGSHOT) ? ITEM_SLINGSHOT : ITEM_BOW;
+
+    if (this->stateFlags1 & PLAYER_STATE1_23)
+        *typePtr = ARROW_NORMAL_HORSE;
+    else if (!LINK_IS_ADULT && globalCtx->shootingGalleryStatus != 0)
+        *typePtr = ARROW_SEED; //fix; if this isn't here, child shooting minigame will shoot arrows instead of seeds. 
+    else
+    {
+        *typePtr = this->heldItemActionParam - 6;
     }
 
     if (gSaveContext.minigameState == 1) {
