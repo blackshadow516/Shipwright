@@ -21,7 +21,7 @@ const char* RainbowColorCvarList[] = {
     "gKeese1_Ef_Prim","gKeese2_Ef_Prim","gKeese1_Ef_Env","gKeese2_Ef_Env",
     "gDF_Col", "gDF_Env", 
     "gNL_Diamond_Col", "gNL_Diamond_Env", "gNL_Orb_Col", "gNL_Orb_Env",
-    "gTrailCol", "gCharged1Col", "gCharged1ColEnv", "gCharged2Col", "gCharged2ColEnv",
+    "gTrail1Col", "gTrail2Col", "gCharged1Col", "gCharged1ColEnv", "gCharged2Col", "gCharged2ColEnv",
     "gCCFileChoosePrim", "gCCFileChooseTextPrim", "gCCEquipmentsPrim", "gCCItemsPrim",
     "gCCMapsPrim", "gCCQuestsPrim", "gCCSavePrim", "gCCGameoverPrim"
 };

@@ -199,8 +199,12 @@ s32 EffectBlure_Update(void* thisx) {
     s16 RedColor;
     s16 GreenColor;
     s16 BlueColor;
+    s16 RedColor2;
+    s16 GreenColor2;
+    s16 BlueColor2;
     s16 TrailDuration;
-    Color_RGB8 Trails_col = CVar_GetRGB("gTrailCol", Trails_Color_ori);
+    Color_RGB8 Trails_col = CVar_GetRGB("gTrail1Col", Trails_Color_ori);
+    Color_RGB8 Trails_col2 = CVar_GetRGB("gTrail2Col", Trails_Color_ori);
 
     if (this == NULL) {
         return 0;
@@ -214,26 +218,32 @@ s32 EffectBlure_Update(void* thisx) {
         RedColor = Trails_col.r;
         GreenColor = Trails_col.g;
         BlueColor = Trails_col.b;
+        RedColor2 = Trails_col2.r;
+        GreenColor2 = Trails_col2.g;
+        BlueColor2 = Trails_col2.b;
         TrailDuration = 4.0f * CVar_GetS32("gTrailDurantion",1);
     } else {
         RedColor = Trails_Color_ori.r;
         GreenColor = Trails_Color_ori.g;
         BlueColor = Trails_Color_ori.b;
+        RedColor2 = Trails_Color_ori.r;
+        GreenColor2 = Trails_Color_ori.g;
+        BlueColor2 = Trails_Color_ori.b;
         TrailDuration=4.0f;
     }
 
     this->p1StartColor.r = RedColor;
-    this->p2StartColor.r = RedColor;
+    this->p2StartColor.r = RedColor2;
     this->p1EndColor.r = RedColor;
-    this->p2EndColor.r = RedColor;
+    this->p2EndColor.r = RedColor2;
     this->p1StartColor.g = GreenColor;
-    this->p2StartColor.g = GreenColor;
+    this->p2StartColor.g = GreenColor2;
     this->p1EndColor.g = GreenColor;
-    this->p2EndColor.g = GreenColor;
+    this->p2EndColor.g = GreenColor2;
     this->p1StartColor.b = BlueColor;
-    this->p2StartColor.b = BlueColor;
+    this->p2StartColor.b = BlueColor2;
     this->p1EndColor.b = BlueColor;
-    this->p2EndColor.b = BlueColor;
+    this->p2EndColor.b = BlueColor2;
     this->elemDuration = TrailDuration;
 
     while (true) {
@@ -730,7 +740,7 @@ void EffectBlure_DrawSmooth(EffectBlure* this2, GraphicsContext* gfxCtx) {
             (((elem->flags & 3) == 2) && (((elem + 1)->flags & 3) == 0)) ||
             (((elem->flags & 3) == 0) && (((elem + 1)->flags & 3) == 2)) ||
             (((elem->flags & 3) == 2) && (((elem + 1)->flags & 3) == 2))) {
-            EffectBlure_DrawElemNoInterpolation(this, elem, i, gfxCtx);
+            EffectBlure_DrawElemHermiteInterpolation(this, elem, i, gfxCtx);
         } else {
             EffectBlure_DrawElemHermiteInterpolation(this, elem, i, gfxCtx);
         }

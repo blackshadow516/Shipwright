@@ -131,17 +131,17 @@ Gfx* D_80125E18[] = {
 };
 
 Gfx* D_80125E28[] = {
-    gLinkAdultLeftHandHoldingMasterSwordNearDL,
-    gLinkChildLeftFistAndKokiriSwordNearDL,
-    gLinkAdultLeftHandHoldingMasterSwordFarDL,
-    gLinkChildLeftFistAndKokiriSwordFarDL,
+    gLinkAdultLeftHandClosedNearDL,
+    gLinkChildLeftFistNearDL,
+    gLinkAdultLeftHandClosedFarDL,
+    gLinkChildLeftFistFarDL,
 };
 
 Gfx* D_80125E38[] = {
-    gLinkAdultLeftHandHoldingMasterSwordNearDL,
-    gLinkChildLeftFistAndKokiriSwordNearDL,
-    gLinkAdultLeftHandHoldingMasterSwordFarDL,
-    gLinkChildLeftFistAndKokiriSwordFarDL,
+    gLinkAdultLeftHandClosedNearDL,
+    gLinkChildLeftFistNearDL,
+    gLinkAdultLeftHandClosedFarDL,
+    gLinkChildLeftFistFarDL,
 };
 
 Gfx* D_80125E48[] = {
@@ -208,17 +208,17 @@ Gfx* D_80125EC8[] = {
 };
 
 Gfx* D_80125ED8[] = {
-    gLinkAdultRightHandHoldingHookshotNearDL,
-    gLinkChildRightHandNearDL,
-    gLinkAdultRightHandHoldingHookshotNearDL, // The 'far' display list exists but is not used
-    gLinkChildRightHandFarDL,
+    gLinkAdultLeftHandClosedNearDL,
+    gLinkChildLeftFistNearDL,
+    gLinkAdultLeftHandClosedFarDL,
+    gLinkChildLeftFistFarDL,
 };
 
 Gfx* D_80125EE8[] = {
-    gLinkAdultLeftHandHoldingHammerNearDL,
-    gLinkChildLeftHandNearDL,
-    gLinkAdultLeftHandHoldingHammerFarDL,
-    gLinkChildLeftHandFarDL,
+    gLinkAdultLeftHandClosedNearDL,
+    gLinkChildLeftFistNearDL,
+    gLinkAdultLeftHandClosedFarDL,
+    gLinkChildLeftFistFarDL,
 };
 
 Gfx* D_80125EF8[] = {
@@ -803,6 +803,13 @@ void func_8008F470(GlobalContext* globalCtx, void** skeleton, Vec3s* jointTable,
             if (Player_GetStrength() > PLAYER_STR_NONE) {
                 gSPDisplayList(POLY_OPA_DISP++, gLinkChildGoronBraceletDL);
             }
+            //add boots to young link
+            if (boots != 0) {
+                Gfx** bootDLists = sBootDListGroups[boots - 1];
+
+                gSPDisplayList(POLY_OPA_DISP++, bootDLists[0]);
+                gSPDisplayList(POLY_OPA_DISP++, bootDLists[1]);
+            }
         }
     }
 
@@ -1328,18 +1335,47 @@ void func_80090D20(GlobalContext* globalCtx, s32 limbIndex, Gfx** dList, Vec3s* 
             gSPDisplayList(POLY_OPA_DISP++, gLinkChildLeftFistAndBoomerangNearDL);
 
             CLOSE_DISPS(globalCtx->state.gfxCtx);
-        } else if ((this->actor.scale.y >= 0.0f) && (this->swordState != 0)) {
-            Vec3f spE4[3];
+        }else if (this->itemActionParam == PLAYER_AP_HAMMER) {
+            Vec3f sp124[3];
 
-            if (Player_HoldsBrokenKnife(this)) {
-                D_80126080.x = 1500.0f;
-            } else {
-                D_80126080.x = sSwordLengths[Player_GetSwordHeld(this)];
-            }
+            OPEN_DISPS(globalCtx->state.gfxCtx);
 
-            func_80090A28(this, spE4);
-            func_800906D4(globalCtx, this, spE4);
-        } else if ((*dList != NULL) && (this->leftHandType == 7)) {
+            gSPMatrix(POLY_OPA_DISP++, MATRIX_NEWMTX(globalCtx->state.gfxCtx),
+                      G_MTX_NOPUSH | G_MTX_LOAD | G_MTX_MODELVIEW);
+            gSPDisplayList(POLY_OPA_DISP++, gLinkAdultLeftHandHoldingHammerNearDL);
+
+            CLOSE_DISPS(globalCtx->state.gfxCtx);
+        }else if (this->itemActionParam == PLAYER_AP_SWORD_KOKIRI) {
+            Vec3f sp124[3];
+
+            OPEN_DISPS(globalCtx->state.gfxCtx);
+
+            gSPMatrix(POLY_OPA_DISP++, MATRIX_NEWMTX(globalCtx->state.gfxCtx),
+                      G_MTX_NOPUSH | G_MTX_LOAD | G_MTX_MODELVIEW);
+            gSPDisplayList(POLY_OPA_DISP++, gLinkChildLeftFistAndKokiriSwordNearDL);
+
+            CLOSE_DISPS(globalCtx->state.gfxCtx);
+        }else if (this->itemActionParam == PLAYER_AP_SWORD_MASTER) {
+            Vec3f sp124[3];
+
+            OPEN_DISPS(globalCtx->state.gfxCtx);
+
+            gSPMatrix(POLY_OPA_DISP++, MATRIX_NEWMTX(globalCtx->state.gfxCtx),
+                      G_MTX_NOPUSH | G_MTX_LOAD | G_MTX_MODELVIEW);
+            gSPDisplayList(POLY_OPA_DISP++, gLinkAdultLeftHandHoldingMasterSwordNearDL);
+
+            CLOSE_DISPS(globalCtx->state.gfxCtx);
+        }else if (this->itemActionParam == PLAYER_AP_SWORD_BGS) {
+            Vec3f sp124[3];
+
+            OPEN_DISPS(globalCtx->state.gfxCtx);
+
+            gSPMatrix(POLY_OPA_DISP++, MATRIX_NEWMTX(globalCtx->state.gfxCtx),
+                      G_MTX_NOPUSH | G_MTX_LOAD | G_MTX_MODELVIEW);
+            gSPDisplayList(POLY_OPA_DISP++, gLinkAdultLeftHandHoldingBgsNearDL);
+
+            CLOSE_DISPS(globalCtx->state.gfxCtx);
+        }else if ((*dList != NULL) && (this->leftHandType == 7)) {
             Color_RGB8* bottleColor = &sBottleColors[Player_ActionToBottle(this, this->itemActionParam)];
 
             OPEN_DISPS(globalCtx->state.gfxCtx);
@@ -1351,6 +1387,17 @@ void func_80090D20(GlobalContext* globalCtx, s32 limbIndex, Gfx** dList, Vec3s* 
 
             CLOSE_DISPS(globalCtx->state.gfxCtx);
         }
+        if ((this->actor.scale.y >= 0.0f) && (this->swordState != 0)) {
+            Vec3f spE4[3];
+
+            if (Player_HoldsBrokenKnife(this)) {
+                D_80126080.x = 1500.0f;
+            } else {
+                D_80126080.x = sSwordLengths[Player_GetSwordHeld(this)];
+            }
+            func_80090A28(this, spE4);
+            func_800906D4(globalCtx, this, spE4);
+        } 
 
         if (this->actor.scale.y >= 0.0f) {
             if (!Player_HoldsHookshot(this) && ((hookedActor = this->heldActor) != NULL)) {
@@ -1427,14 +1474,24 @@ void func_80090D20(GlobalContext* globalCtx, s32 limbIndex, Gfx** dList, Vec3s* 
             gSPDisplayList(POLY_OPA_DISP++, (this->itemActionParam == PLAYER_AP_SLINGSHOT) ? gLinkChildRightHandHoldingSlingshotNearDL : gLinkAdultRightHandHoldingBowNearDL);
 
             CLOSE_DISPS(globalCtx->state.gfxCtx);
-        } else if (this->itemActionParam == PLAYER_AP_HOOKSHOT || this->itemActionParam == PLAYER_AP_LONGSHOT) {
+        } else if (this->itemActionParam == PLAYER_AP_HOOKSHOT) {
             Vec3f sp124[3];
 
             OPEN_DISPS(globalCtx->state.gfxCtx);
 
             gSPMatrix(POLY_OPA_DISP++, MATRIX_NEWMTX(globalCtx->state.gfxCtx),
                       G_MTX_NOPUSH | G_MTX_LOAD | G_MTX_MODELVIEW);
-            gSPDisplayList(POLY_OPA_DISP++, gLinkChildLeftFistAndBoomerangNearDL);
+            gSPDisplayList(POLY_OPA_DISP++, gLinkAdultRightHandHoldingHookshotNearDL);
+
+            CLOSE_DISPS(globalCtx->state.gfxCtx);
+        } else if (this->itemActionParam == PLAYER_AP_LONGSHOT) {
+            Vec3f sp124[3];
+
+            OPEN_DISPS(globalCtx->state.gfxCtx);
+
+            gSPMatrix(POLY_OPA_DISP++, MATRIX_NEWMTX(globalCtx->state.gfxCtx),
+                      G_MTX_NOPUSH | G_MTX_LOAD | G_MTX_MODELVIEW);
+            gSPDisplayList(POLY_OPA_DISP++, gLinkAdultRightHandHoldingHookshotNearDL);
 
             CLOSE_DISPS(globalCtx->state.gfxCtx);
 
@@ -1464,10 +1521,6 @@ void func_80090D20(GlobalContext* globalCtx, s32 limbIndex, Gfx** dList, Vec3s* 
                             globalCtx, this, (this->heldItemActionParam == PLAYER_AP_HOOKSHOT) ? 38600.0f : 77600.0f);
                     }
                 }
-                gSPMatrix(POLY_OPA_DISP++, MATRIX_NEWMTX(globalCtx->state.gfxCtx),
-                        G_MTX_NOPUSH | G_MTX_LOAD | G_MTX_MODELVIEW);
-                gSPDisplayList(POLY_OPA_DISP++, gLinkChildLeftFistAndBoomerangNearDL);
-                CLOSE_DISPS(globalCtx->state.gfxCtx);
             }
 
             if ((this->unk_862 != 0) || ((func_8002DD6C(this) == 0) && (heldActor != NULL))) {

@@ -112,7 +112,8 @@ static CosmeticsColorIndividual Spin_Lv2_Prim = { "Level 2 (primary)", "Affects 
 static CosmeticsColorIndividual Spin_Lv2_Env = { "Level 2 (Secondary)", "Affects Secondary color", "gCharged2ColEnv", charged2_colenv, ImVec4(255,100,0,255), true, false, false };
 
 //Trails
-static CosmeticsColorIndividual Trails_col = { "Trails color", "Affects Swords slash, boomerang and Bombchu trails color", "gTrailCol", trailscol, ImVec4(255,255,255,255), true, false, false };
+static CosmeticsColorIndividual Trails1_col = { "Trail start color", "Affects Swords slash, boomerang and Bombchu trails color", "gTrail1Col", trailscol, ImVec4(255,255,255,255), true, false, false };
+static CosmeticsColorIndividual Trails2_col = { "Trail end color", "Affects Swords slash, boomerang and Bombchu trails color", "gTrail2Col", trailscol, ImVec4(255,255,255,255), true, false, false };
 
 //Menus - File Choose
 static CosmeticsColorIndividual FileChoose_Background = { "Main menu color", "Affects the File Select menu background.", "gCCFileChoosePrim", fileselect_colors, ImVec4(100, 150, 255, 255), true, false, false };
@@ -211,7 +212,8 @@ static CosmeticsColorSection SpinAtk_section[] = {
     { &Spin_Lv2_Env, true, false }
 };
 static CosmeticsColorSection Trails_section[] = {
-    { &Trails_col, false, false }
+    { &Trails1_col, false, false },
+    { &Trails2_col, false, false }
 };
 static CosmeticsColorSection FileChoose_section[] = {
     { &FileChoose_Background, false, false },
@@ -304,7 +306,8 @@ static CosmeticsColorSection Everything_Section[] = {
     { &Spin_Lv1_Env, true, false },
     { &Spin_Lv2_Prim, false, true },
     { &Spin_Lv2_Env, true, false },
-    { &Trails_col, false, false },
+    { &Trails1_col, false, false },
+    { &Trails2_col, false, false },
     { &FileChoose_Background, false, false },
     { &FileChoose_BottomText, true, false },
     { &A_Btn, false, false },
@@ -400,7 +403,8 @@ static CosmeticsColorSection AllItemsSkills_section[]{
     { &Spin_Lv1_Env, true, false },
     { &Spin_Lv2_Prim, false, true },
     { &Spin_Lv2_Env, true, false },
-    { &Trails_col, false, false }
+    { &Trails1_col, false, false },
+    { &Trails2_col, false, false }
 };
 
 void InitCosmeticsEditor();//Init the menu itself
