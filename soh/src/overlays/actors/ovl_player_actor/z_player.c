@@ -2197,7 +2197,7 @@ s32 func_80834380(PlayState* play, Player* this, s32* itemPtr, s32* typePtr) {
         }
     } else {
         *itemPtr = ITEM_SLINGSHOT;
-        *typePtr = ARROW_SEED;
+        *typePtr = ARROW_HERO;
     }
 
     if (gSaveContext.minigameState == 1) {

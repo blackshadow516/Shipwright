@@ -135,13 +135,13 @@ void EnArrow_Init(Actor* thisx, PlayState* play) {
         this->actor.params = ARROW_NUT;
     }
 
-    if (this->actor.params <= ARROW_SEED) {
+    if (this->actor.params <= ARROW_HERO) {
 
-        if (this->actor.params <= ARROW_0E) {
+        if (this->actor.params <= ARROW_HERO) {
             SkelAnime_Init(play, &this->skelAnime, &gArrowSkel, &gArrow2Anim, NULL, NULL, 0);
         }
 
-        if (this->actor.params <= ARROW_NORMAL) {
+        if (this->actor.params <= ARROW_NORMAL || this->actor.params == ARROW_HERO) {
             if (this->actor.params == ARROW_NORMAL_HORSE) {
                 blureNormal.elemDuration = 4;
             } else {
@@ -173,7 +173,7 @@ void EnArrow_Init(Actor* thisx, PlayState* play) {
 
         if (this->actor.params < 0) {
             this->collider.base.atFlags = (AT_ON | AT_TYPE_ENEMY);
-        } else if (this->actor.params <= ARROW_SEED) {
+        } else if (this->actor.params <= ARROW_NUT) {
             this->collider.info.toucher.dmgFlags = dmgFlags[this->actor.params];
             LOG_HEX("this->at_info.cl_elem.at_btl_info.at_type", this->collider.info.toucher.dmgFlags);
         }
@@ -207,13 +207,11 @@ void EnArrow_Shoot(EnArrow* this, PlayState* play) {
         }
 
         switch (this->actor.params) {
-            case ARROW_SEED:
-                func_8002F7DC(&player->actor, NA_SE_IT_SLING_SHOT);
-                break;
 
             case ARROW_NORMAL_LIT:
             case ARROW_NORMAL_HORSE:
             case ARROW_NORMAL:
+            case ARROW_HERO:
                 func_8002F7DC(&player->actor, NA_SE_IT_ARROW_SHOT);
                 break;
 
@@ -227,7 +225,7 @@ void EnArrow_Shoot(EnArrow* this, PlayState* play) {
         EnArrow_SetupAction(this, EnArrow_Fly);
         Math_Vec3f_Copy(&this->unk_210, &this->actor.world.pos);
 
-        if (this->actor.params >= ARROW_SEED) {
+        if (this->actor.params >= ARROW_NUT) {
             func_8002D9A4(&this->actor, 80.0f);
             this->timer = 15;
             this->actor.shape.rot.x = this->actor.shape.rot.y = this->actor.shape.rot.z = 0;
@@ -303,11 +301,11 @@ void EnArrow_Fly(EnArrow* this, PlayState* play) {
         this->actor.gravity = -0.4f;
     }
 
-    atTouched = (this->actor.params != ARROW_NORMAL_LIT) && (this->actor.params <= ARROW_SEED) &&
+    atTouched = (this->actor.params != ARROW_NORMAL_LIT) && (this->actor.params <= ARROW_NUT) &&
                 (this->collider.base.atFlags & AT_HIT);
 
     if (atTouched || this->touchedPoly) {
-        if (this->actor.params >= ARROW_SEED) {
+        if (this->actor.params >= ARROW_NUT) {
             if (atTouched) {
                 this->actor.world.pos.x = (this->actor.world.pos.x + this->actor.prevPos.x) * 0.5f;
                 this->actor.world.pos.y = (this->actor.world.pos.y + this->actor.prevPos.y) * 0.5f;
@@ -471,8 +469,10 @@ void func_809B4800(EnArrow* this, PlayState* play) {
         Matrix_MultVec3f(&D_809B4E88, &sp44);
         Matrix_MultVec3f(&D_809B4E94, &sp38);
 
-        if (this->actor.params <= ARROW_SEED) {
+        if (this->actor.params <= ARROW_HERO) {
             addBlureVertex = this->actor.params <= ARROW_LIGHT;
+            if (this->actor.params <= ARROW_HERO)
+                addBlureVertex = true;
 
             if (this->hitActor == NULL) {
                 addBlureVertex &= func_80090480(play, &this->collider, &this->weaponInfo, &sp44, &sp38);
@@ -499,7 +499,7 @@ void EnArrow_Draw(Actor* thisx, PlayState* play) {
     u8 alpha;
     f32 scale;
 
-    if (this->actor.params <= ARROW_0E) {
+    if (this->actor.params <= ARROW_HERO) {
         Gfx_SetupDL_25Opa(play->state.gfxCtx);
         SkelAnime_DrawLod(play, this->skelAnime.skeleton, this->skelAnime.jointTable, NULL, NULL, this,
                           (this->actor.projectedPos.z < MREG(95)) ? 0 : 1);
@@ -510,11 +510,7 @@ void EnArrow_Draw(Actor* thisx, PlayState* play) {
 
         Gfx_SetupDL_25Xlu2(play->state.gfxCtx);
 
-        if (this->actor.params == ARROW_SEED) {
-            gDPSetPrimColor(POLY_XLU_DISP++, 0, 0, 255, 255, 255, 255);
-            gDPSetEnvColor(POLY_XLU_DISP++, 0, 255, 255, alpha);
-            scale = 50.0f;
-        } else {
+        {
             gDPSetPrimColor(POLY_XLU_DISP++, 0, 0, 12, 0, 0, 255);
             gDPSetEnvColor(POLY_XLU_DISP++, 250, 250, 0, alpha);
             scale = 150.0f;

@@ -37,7 +37,7 @@ typedef enum {
     /*  6  */ ARROW_0C,
     /*  7  */ ARROW_0D,
     /*  8  */ ARROW_0E,
-    /*  9  */ ARROW_SEED,
+    /*  9  */ ARROW_HERO, //normal arrow fired from the hero's bow
     /*  10 */ ARROW_NUT
 } ArrowType;
 

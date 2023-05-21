@@ -246,7 +246,7 @@ void UseSlingshot(Actor* thisx, PlayState* play, u8 started) {
                 this->itemTimer = 10;
                 Actor* newarrow = Actor_SpawnAsChild(
                     &play->actorCtx, &this->actor, play, ACTOR_EN_ARROW, this->actor.world.pos.x,
-                    this->actor.world.pos.y + 7, this->actor.world.pos.z, 0, this->actor.world.rot.y, 0, ARROW_SEED);
+                    this->actor.world.pos.y + 7, this->actor.world.pos.z, 0, this->actor.world.rot.y, 0, ARROW_HERO);
                 GET_PLAYER(play)->unk_A73 = 4;
                 newarrow->parent = NULL;
                 Inventory_ChangeAmmo(ITEM_SLINGSHOT, -1);
