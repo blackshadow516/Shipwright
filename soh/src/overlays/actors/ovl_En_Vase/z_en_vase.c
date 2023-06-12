@@ -7,11 +7,11 @@
 #include "z_en_vase.h"
 #include "objects/object_vase/object_vase.h"
 
-#define FLAGS ACTOR_FLAG_4
+#define FLAGS ACTOR_FLAG_UPDATE_WHILE_CULLED
 
-void EnVase_Init(Actor* thisx, GlobalContext* globalCtx);
-void EnVase_Destroy(Actor* thisx, GlobalContext* globalCtx);
-void EnVase_Draw(Actor* thisx, GlobalContext* globalCtx);
+void EnVase_Init(Actor* thisx, PlayState* play);
+void EnVase_Destroy(Actor* thisx, PlayState* play);
+void EnVase_Draw(Actor* thisx, PlayState* play);
 
 const ActorInit En_Vase_InitVars = {
     ACTOR_EN_VASE,
@@ -26,7 +26,7 @@ const ActorInit En_Vase_InitVars = {
     NULL,
 };
 
-void EnVase_Init(Actor* thisx, GlobalContext* globalCtx) {
+void EnVase_Init(Actor* thisx, PlayState* play) {
     EnVase* this = (EnVase*)thisx;
 
     Actor_SetScale(&this->actor, 0.01f);
@@ -34,9 +34,9 @@ void EnVase_Init(Actor* thisx, GlobalContext* globalCtx) {
     ActorShape_Init(&this->actor.shape, 0.0f, ActorShadow_DrawCircle, 6.0f);
 }
 
-void EnVase_Destroy(Actor* thisx, GlobalContext* globalCtx) {
+void EnVase_Destroy(Actor* thisx, PlayState* play) {
 }
 
-void EnVase_Draw(Actor* thisx, GlobalContext* globalCtx) {
-    Gfx_DrawDListOpa(globalCtx, gUnusedVaseDL);
+void EnVase_Draw(Actor* thisx, PlayState* play) {
+    Gfx_DrawDListOpa(play, gUnusedVaseDL);
 }

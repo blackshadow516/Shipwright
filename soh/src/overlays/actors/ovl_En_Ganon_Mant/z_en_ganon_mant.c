@@ -7,12 +7,12 @@
 #include "z_en_ganon_mant.h"
 #include "overlays/actors/ovl_Boss_Ganon/z_boss_ganon.h"
 
-#define FLAGS (ACTOR_FLAG_4 | ACTOR_FLAG_5)
+#define FLAGS (ACTOR_FLAG_UPDATE_WHILE_CULLED | ACTOR_FLAG_DRAW_WHILE_CULLED)
 
-void EnGanonMant_Init(Actor* thisx, GlobalContext* globalCtx);
-void EnGanonMant_Destroy(Actor* thisx, GlobalContext* globalCtx);
-void EnGanonMant_Update(Actor* thisx, GlobalContext* globalCtx);
-void EnGanonMant_Draw(Actor* thisx, GlobalContext* globalCtx);
+void EnGanonMant_Init(Actor* thisx, PlayState* play);
+void EnGanonMant_Destroy(Actor* thisx, PlayState* play);
+void EnGanonMant_Update(Actor* thisx, PlayState* play);
+void EnGanonMant_Draw(Actor* thisx, PlayState* play);
 
 const ActorInit En_Ganon_Mant_InitVars = {
     ACTOR_EN_GANON_MANT,
@@ -96,17 +96,23 @@ static u16 sVerticesMap[GANON_MANT_NUM_STRANDS * GANON_MANT_NUM_JOINTS] = {
 #define MANT_TEX_WIDTH 32
 #define MANT_TEX_HEIGHT 64
 
-//static u64 sForceAlignment = 0;
+static u8 sMaskTex[MANT_TEX_WIDTH * MANT_TEX_HEIGHT] = { {0} };
 
 #include "overlays/ovl_En_Ganon_Mant/ovl_En_Ganon_Mant.h"
 
-void EnGanonMant_Init(Actor* thisx, GlobalContext* globalCtx) {
+void EnGanonMant_Init(Actor* thisx, PlayState* play) {
     EnGanonMant* this = (EnGanonMant*)thisx;
 
-    this->actor.flags &= ~ACTOR_FLAG_0;
+    this->actor.flags &= ~ACTOR_FLAG_TARGETABLE;
+
+    for (int i = 0; i < ARRAY_COUNT(sMaskTex); i++) {
+        sMaskTex[i] = 0;
+    }
+
+    Gfx_RegisterBlendedTexture(gMantTex, sMaskTex, NULL);
 }
 
-void EnGanonMant_Destroy(Actor* thisx, GlobalContext* globalCtx) {
+void EnGanonMant_Destroy(Actor* thisx, PlayState* play) {
 }
 
 /**
@@ -127,8 +133,6 @@ void EnGanonMant_Tear(EnGanonMant* this) {
     s16 count = shape->count;
     s16* tearAreaSizes = shape->tearAreaSizes;
 
-    u8* gMantTexProper = ResourceMgr_LoadTexByName(gMantTex);
-
     for (i = 0; i < count; i++) {
         if ((0 <= tx && tx < MANT_TEX_WIDTH) && (0 <= ty && ty < MANT_TEX_HEIGHT)) {
             for (areaX = 0; areaX <= tearAreaSizes[i]; areaX++) {
@@ -136,7 +140,7 @@ void EnGanonMant_Tear(EnGanonMant* this) {
                 for (areaY = 0; areaY <= tearAreaSizes[i]; areaY++) {
                     texIdx = (s16)((s16)tx + ((s16)ty * MANT_TEX_WIDTH)) + ((s16)areaX + ((s16)areaY * MANT_TEX_WIDTH));
                     if (texIdx < MANT_TEX_WIDTH * MANT_TEX_HEIGHT) {
-                        ((u16*)gMantTexProper)[texIdx] = 0;
+                        sMaskTex[texIdx] = 1;
                     }
                 }
             }
@@ -154,7 +158,7 @@ void EnGanonMant_Tear(EnGanonMant* this) {
 /**
  * Updates the dynamic strands that control the shape and motion of the cloak
  */
-void EnGanonMant_UpdateStrand(GlobalContext* globalCtx, EnGanonMant* this, Vec3f* root, Vec3f* pos, Vec3f* nextPos,
+void EnGanonMant_UpdateStrand(PlayState* play, EnGanonMant* this, Vec3f* root, Vec3f* pos, Vec3f* nextPos,
                               Vec3f* rot, Vec3f* vel, s16 strandNum) {
     f32 xDiff;
     f32 zDiff;
@@ -334,7 +338,7 @@ void EnGanonMant_UpdateVertices(EnGanonMant* this) {
     }
 }
 
-void EnGanonMant_Update(Actor* thisx, GlobalContext* globalCtx) {
+void EnGanonMant_Update(Actor* thisx, PlayState* play) {
     EnGanonMant* this = (EnGanonMant*)thisx;
     BossGanon* ganon = (BossGanon*)this->actor.parent;
 
@@ -360,14 +364,17 @@ void EnGanonMant_Update(Actor* thisx, GlobalContext* globalCtx) {
     }
 }
 
-void EnGanonMant_DrawCloak(GlobalContext* globalCtx, EnGanonMant* this) {
+void EnGanonMant_DrawCloak(PlayState* play, EnGanonMant* this) {
     s32 pad;
 
-    OPEN_DISPS(globalCtx->state.gfxCtx);
+    OPEN_DISPS(play->state.gfxCtx);
+
+    // Invalidate cape texture mask as it may have been torn
+    gSPInvalidateTexCache(POLY_OPA_DISP++, sMaskTex);
 
     Matrix_Translate(0.0f, 0.0f, 0.0f, MTXMODE_NEW);
 
-    gSPMatrix(POLY_OPA_DISP++, MATRIX_NEWMTX(globalCtx->state.gfxCtx),
+    gSPMatrix(POLY_OPA_DISP++, MATRIX_NEWMTX(play->state.gfxCtx),
               G_MTX_NOPUSH | G_MTX_LOAD | G_MTX_MODELVIEW);
 
     // set texture
@@ -376,18 +383,18 @@ void EnGanonMant_DrawCloak(GlobalContext* globalCtx, EnGanonMant* this) {
     // set vertices, vertices are double buffered to prevent
     // modification of vertices as they are being drawn
     if (this->frameTimer % 2 != 0) {
-        gSPSegment(POLY_OPA_DISP++, 0x0C, gMant1Vtx);
+        gSPSegmentLoadRes(POLY_OPA_DISP++, 0x0C, gMant1Vtx);
     } else {
-        gSPSegment(POLY_OPA_DISP++, 0x0C, gMant2Vtx);
+        gSPSegmentLoadRes(POLY_OPA_DISP++, 0x0C, gMant2Vtx);
     }
 
     // draw cloak
     gSPDisplayList(POLY_OPA_DISP++, gMantDL);
 
-    CLOSE_DISPS(globalCtx->state.gfxCtx);
+    CLOSE_DISPS(play->state.gfxCtx);
 }
 
-void EnGanonMant_Draw(Actor* thisx, GlobalContext* globalCtx) {
+void EnGanonMant_Draw(Actor* thisx, PlayState* play) {
     EnGanonMant* this = (EnGanonMant*)thisx;
     f32 xDiff;
     f32 pitch;
@@ -459,7 +466,7 @@ void EnGanonMant_Draw(Actor* thisx, GlobalContext* globalCtx) {
             }
 
             // Update the strand joints
-            EnGanonMant_UpdateStrand(globalCtx, this, &this->strands[strandIdx].root, this->strands[strandIdx].joints,
+            EnGanonMant_UpdateStrand(play, this, &this->strands[strandIdx].root, this->strands[strandIdx].joints,
                                      this->strands[nextStrandIdx].joints, this->strands[strandIdx].rotations,
                                      this->strands[strandIdx].velocities, strandIdx);
             Matrix_Pop();
@@ -468,5 +475,5 @@ void EnGanonMant_Draw(Actor* thisx, GlobalContext* globalCtx) {
         this->updateHasRun = false;
     }
 
-    EnGanonMant_DrawCloak(globalCtx, this);
+    EnGanonMant_DrawCloak(play, this);
 }

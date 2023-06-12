@@ -1,0 +1,46 @@
+#include "GameInteractor.h"
+
+#ifdef __cplusplus
+extern "C" {
+#endif
+// MARK: - Gameplay
+void GameInteractor_ExecuteOnLoadGame(int32_t fileNum);
+void GameInteractor_ExecuteOnExitGame(int32_t fileNum);
+void GameInteractor_ExecuteOnGameFrameUpdate();
+void GameInteractor_ExecuteOnItemReceiveHooks(GetItemEntry itemEntry);
+void GameInteractor_ExecuteOnSaleEndHooks(GetItemEntry itemEntry);
+void GameInteractor_ExecuteOnTransitionEndHooks(int16_t sceneNum);
+void GameInteractor_ExecuteOnSceneInit(int16_t sceneNum);
+void GameInteractor_ExecuteOnSceneSpawnActors();
+void GameInteractor_ExecuteOnPlayerUpdate();
+void GameInteractor_ExecuteOnOcarinaSongAction();
+void GameInteractor_ExecuteOnActorUpdate(void* actor);
+void GameInteractor_ExecuteOnPlayerBonk();
+void GameInteractor_ExecuteOnOcarinaSongAction();
+
+// MARK: -  Save Files
+void GameInteractor_ExecuteOnSaveFile(int32_t fileNum);
+void GameInteractor_ExecuteOnLoadFile(int32_t fileNum);
+void GameInteractor_ExecuteOnDeleteFile(int32_t fileNum);
+
+// MARK: - Dialog
+void GameInteractor_ExecuteOnDialogMessage();
+void GameInteractor_ExecuteOnPresentTitleCard();
+void GameInteractor_ExecuteOnInterfaceUpdate();
+void GameInteractor_ExecuteOnKaleidoscopeUpdate(int16_t inDungeonScene);
+
+// MARK: - Main Menu
+void GameInteractor_ExecuteOnPresentFileSelect();
+void GameInteractor_ExecuteOnUpdateFileSelectSelection(uint16_t optionIndex);
+void GameInteractor_ExecuteOnUpdateFileCopySelection(uint16_t optionIndex);
+void GameInteractor_ExecuteOnUpdateFileCopyConfirmationSelection(uint16_t optionIndex);
+void GameInteractor_ExecuteOnUpdateFileEraseSelection(uint16_t optionIndex);
+void GameInteractor_ExecuteOnUpdateFileEraseConfirmationSelection(uint16_t optionIndex);
+void GameInteractor_ExecuteOnUpdateFileAudioSelection(uint8_t optionIndex);
+void GameInteractor_ExecuteOnUpdateFileTargetSelection(uint8_t optionIndex);
+
+// MARK: - Game
+void GameInteractor_ExecuteOnSetGameLanguage();
+#ifdef __cplusplus
+}
+#endif

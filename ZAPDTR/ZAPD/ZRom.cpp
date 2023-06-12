@@ -1,6 +1,6 @@
 #include "ZRom.h"
 #include "Utils/BitConverter.h"
-#include "Utils/File.h"
+#include <Utils/DiskFile.h>
 #include "Utils/Directory.h"
 #include "yaz0/yaz0.h"
 
@@ -64,12 +64,38 @@ namespace fs = std::filesystem;
 #define OOT_PAL_GC_MQ_DBG 0x917D18F6
 #define OOT_IQUE_TW 0x3D81FB3E
 #define OOT_IQUE_CN 0xB1E1E07B
-#define OOT_UNKNOWN 0xFFFFFFFF
+#define UNKNOWN 0xFFFFFFFF
+
+bool ZRom::IsMQ() {
+    int crc = BitConverter::ToInt32BE(romData, 0x10);
+    switch (crc) {
+        case OOT_NTSC_10:
+        case OOT_NTSC_11:
+        case OOT_NTSC_12:
+        case OOT_PAL_10:
+        case OOT_PAL_11:
+        case OOT_NTSC_JP_GC:
+        case OOT_NTSC_JP_GC_CE:
+        case OOT_NTSC_US_GC:
+        case OOT_PAL_GC:
+        case OOT_PAL_GC_DBG1:
+        case OOT_PAL_GC_DBG2:
+        case OOT_IQUE_CN:
+        case OOT_IQUE_TW:
+        default:
+            return false;
+        case OOT_NTSC_JP_MQ:
+        case OOT_NTSC_US_MQ:
+        case OOT_PAL_MQ:
+        case OOT_PAL_GC_MQ_DBG:
+            return true;
+    }
+}
 
 ZRom::ZRom(std::string romPath)
 {
 	RomVersion version;
-	romData = File::ReadAllBytes(romPath);
+	romData = DiskFile::ReadAllBytes(romPath);
 
 	version.crc = BitConverter::ToInt32BE(romData, 0x10);
 
@@ -163,7 +189,7 @@ ZRom::ZRom(std::string romPath)
 	}
 
 	auto path = StringHelper::Sprintf("%s/%s", Globals::Instance->fileListPath.string().c_str(), version.listPath.c_str());
-	auto txt = File::ReadAllText(path);
+	auto txt = DiskFile::ReadAllText(path);
 	std::vector<std::string> lines = StringHelper::Split(txt, "\n");
 
     std::vector<uint8_t> decompressedData(1);
@@ -196,7 +222,7 @@ ZRom::ZRom(std::string romPath)
 		else
 			files[lines[i]] = outData;
 
-		//File::WriteAllBytes(StringHelper::Sprintf("baserom/%s", lines[i].c_str()), files[lines[i]]);
+		//DiskFile::WriteAllBytes(StringHelper::Sprintf("baserom/%s", lines[i].c_str()), files[lines[i]]);
 	}
 }
 

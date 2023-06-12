@@ -12,7 +12,7 @@
 #include "overlays/effects/ovl_Effect_Ss_Hahen/z_eff_ss_hahen.h"
 #include "overlays/actors/ovl_Door_Warp1/z_door_warp1.h"
 
-#define FLAGS (ACTOR_FLAG_0 | ACTOR_FLAG_2 | ACTOR_FLAG_4 | ACTOR_FLAG_5)
+#define FLAGS (ACTOR_FLAG_TARGETABLE | ACTOR_FLAG_HOSTILE | ACTOR_FLAG_UPDATE_WHILE_CULLED | ACTOR_FLAG_DRAW_WHILE_CULLED)
 
 typedef enum {
     /* 0 */ NOT_DEAD,
@@ -47,27 +47,27 @@ typedef enum {
     /* 2 */ DEATH_HUNCHED
 } BossGanondrofDeathAction;
 
-void BossGanondrof_Init(Actor* thisx, GlobalContext* globalCtx);
-void BossGanondrof_Destroy(Actor* thisx, GlobalContext* globalCtx);
-void BossGanondrof_Update(Actor* thisx, GlobalContext* globalCtx);
-void BossGanondrof_Draw(Actor* thisx, GlobalContext* globalCtx);
+void BossGanondrof_Init(Actor* thisx, PlayState* play);
+void BossGanondrof_Destroy(Actor* thisx, PlayState* play);
+void BossGanondrof_Update(Actor* thisx, PlayState* play);
+void BossGanondrof_Draw(Actor* thisx, PlayState* play);
 
-void BossGanondrof_SetupIntro(BossGanondrof* this, GlobalContext* globalCtx);
-void BossGanondrof_Intro(BossGanondrof* this, GlobalContext* globalCtx);
+void BossGanondrof_SetupIntro(BossGanondrof* this, PlayState* play);
+void BossGanondrof_Intro(BossGanondrof* this, PlayState* play);
 void BossGanondrof_SetupPaintings(BossGanondrof* this);
-void BossGanondrof_Paintings(BossGanondrof* this, GlobalContext* globalCtx);
+void BossGanondrof_Paintings(BossGanondrof* this, PlayState* play);
 void BossGanondrof_SetupNeutral(BossGanondrof* this, f32 arg1);
-void BossGanondrof_Neutral(BossGanondrof* this, GlobalContext* globalCtx);
-void BossGanondrof_SetupThrow(BossGanondrof* this, GlobalContext* globalCtx);
-void BossGanondrof_Throw(BossGanondrof* this, GlobalContext* globalCtx);
-void BossGanondrof_SetupBlock(BossGanondrof* this, GlobalContext* globalCtx);
-void BossGanondrof_Block(BossGanondrof* this, GlobalContext* globalCtx);
-void BossGanondrof_SetupReturn(BossGanondrof* this, GlobalContext* globalCtx);
-void BossGanondrof_Return(BossGanondrof* this, GlobalContext* globalCtx);
-void BossGanondrof_SetupCharge(BossGanondrof* this, GlobalContext* globalCtx);
-void BossGanondrof_Charge(BossGanondrof* this, GlobalContext* globalCtx);
-void BossGanondrof_Stunned(BossGanondrof* this, GlobalContext* globalCtx);
-void BossGanondrof_Death(BossGanondrof* this, GlobalContext* globalCtx);
+void BossGanondrof_Neutral(BossGanondrof* this, PlayState* play);
+void BossGanondrof_SetupThrow(BossGanondrof* this, PlayState* play);
+void BossGanondrof_Throw(BossGanondrof* this, PlayState* play);
+void BossGanondrof_SetupBlock(BossGanondrof* this, PlayState* play);
+void BossGanondrof_Block(BossGanondrof* this, PlayState* play);
+void BossGanondrof_SetupReturn(BossGanondrof* this, PlayState* play);
+void BossGanondrof_Return(BossGanondrof* this, PlayState* play);
+void BossGanondrof_SetupCharge(BossGanondrof* this, PlayState* play);
+void BossGanondrof_Charge(BossGanondrof* this, PlayState* play);
+void BossGanondrof_Stunned(BossGanondrof* this, PlayState* play);
+void BossGanondrof_Death(BossGanondrof* this, PlayState* play);
 
 const ActorInit Boss_Ganondrof_InitVars = {
     ACTOR_BOSS_GANONDROF,
@@ -181,6 +181,8 @@ static u8 sDecayMaskTotal[16 * 16] = {
 };
 // clang-format on
 
+static u8 sDecayTex[16 * 16] = { { 0 } };
+
 // These are Phantom Ganon's body textures, but I don't know which is which.
 static void* sLimbTex_rgba16_8x8[] = {
     gPhantomGanonLimbTex_00A800, gPhantomGanonLimbTex_00AE80, gPhantomGanonLimbTex_00AF00,
@@ -208,81 +210,9 @@ static InitChainEntry sInitChain[] = {
 
 static Vec3f sAudioVec = { 0.0f, 0.0f, 50.0f };
 
-// OTRTODO: This code appears to cause the game to gradually crash...
-// Might be an OoB write. For now it's disabled.
-void BossGanondrof_ClearPixels8x8(s16* texture, u8* mask, s16 index)
-{
-    //texture = ResourceMgr_LoadTexByName(texture);
-    if (mask[index]) {
-        //texture[index / 4] = 0;
-        ResourceMgr_WriteTexS16ByName(texture, index / 4, 0);
-    }
-}
-
-void BossGanondrof_ClearPixels16x8(s16* texture, u8* mask, s16 index) {
-    //texture = ResourceMgr_LoadTexByName(texture);
-    if (mask[index]) {
-        //texture[index / 2] = 0;
-        ResourceMgr_WriteTexS16ByName(texture, index / 2, 0);
-
-    }
-}
-
-void BossGanondrof_ClearPixels16x16(s16* texture, u8* mask, s16 index, s16 bpp) {
-    //texture = ResourceMgr_LoadTexByName(texture);
-    if (mask[index]) {
-        //texture[index] = 0;
-        ResourceMgr_WriteTexS16ByName(texture, index, 0);
-    }
-}
-
-void BossGanondrof_ClearPixels32x16(s16* texture, u8* mask, s16 index) {
-    //texture = ResourceMgr_LoadTexByName(texture);
-    if (mask[index]) {
-        s16 i = (index & 0xF) + ((index & 0xF0) << 1);
-
-        ResourceMgr_WriteTexS16ByName(texture, i + 0x10, 0);
-        ResourceMgr_WriteTexS16ByName(texture, i, 0);
-        //texture[i + 0x10] = 0;
-        //texture[i] = 0;
-    }
-}
-
-void BossGanondrof_ClearPixels16x32(s16* texture, u8* mask, s16 index) {
-    //texture = ResourceMgr_LoadTexByName(texture);
-    if (mask[index]) {
-        s16 i = ((index & 0xF) * 2) + ((index & 0xF0) * 2);
-
-        ResourceMgr_WriteTexS16ByName(texture, i + 1, 0);
-        ResourceMgr_WriteTexS16ByName(texture, i, 0);
-
-        //texture[i + 1] = 0;
-        //texture[i] = 0;
-    }
-
-}
-
 void BossGanondrof_ClearPixels(u8* mask, s16 index) {
-    s16 i;
-
-    for (i = 0; i < 5; i++) {
-        // ARRAY_COUNT can't be used here because the arrays aren't guaranteed to be the same size.
-        BossGanondrof_ClearPixels8x8(SEGMENTED_TO_VIRTUAL(sLimbTex_rgba16_8x8[i]), mask, index);
-        BossGanondrof_ClearPixels16x8(SEGMENTED_TO_VIRTUAL(sLimbTex_rgba16_16x8[i]), mask, index);
-    }
-
-    for (i = 0; i < ARRAY_COUNT(sLimbTex_rgba16_16x16); i++) {
-        BossGanondrof_ClearPixels16x16(SEGMENTED_TO_VIRTUAL(sLimbTex_rgba16_16x16[i]), mask, index, 2);
-    }
-
-    for (i = 0; i < ARRAY_COUNT(sLimbTex_rgba16_16x32); i++) {
-        BossGanondrof_ClearPixels16x32(SEGMENTED_TO_VIRTUAL(sLimbTex_rgba16_16x32[i]), mask, index);
-    }
-
-    BossGanondrof_ClearPixels32x16(SEGMENTED_TO_VIRTUAL(gPhantomGanonLimbTex_00B380), mask, index);
-    BossGanondrof_ClearPixels16x32(SEGMENTED_TO_VIRTUAL(gPhantomGanonEyeTex), mask, index);
-    for (i = 0; i < ARRAY_COUNT(sMouthTex_ci8_16x16); i++) {
-        BossGanondrof_ClearPixels16x16(SEGMENTED_TO_VIRTUAL(sMouthTex_ci8_16x16[i]), mask, index, 1);
+    if (mask[index]) {
+        sDecayTex[index] = 1;
     }
 }
 
@@ -292,64 +222,84 @@ void BossGanondrof_SetColliderPos(Vec3f* pos, ColliderCylinder* collider) {
     collider->dim.pos.z = pos->z;
 }
 
-void BossGanondrof_Init(Actor* thisx, GlobalContext* globalCtx) {
+void BossGanondrof_Init(Actor* thisx, PlayState* play) {
     s32 pad;
     BossGanondrof* this = (BossGanondrof*)thisx;
 
     Actor_ProcessInitChain(&this->actor, sInitChain);
     ActorShape_Init(&this->actor.shape, 0.0f, NULL, 0.0f);
     Actor_SetScale(&this->actor, 0.01f);
-    SkelAnime_Init(globalCtx, &this->skelAnime, &gPhantomGanonSkel, &gPhantomGanonRideAnim, NULL, NULL, 0);
+    SkelAnime_Init(play, &this->skelAnime, &gPhantomGanonSkel, &gPhantomGanonRideAnim, NULL, NULL, 0);
     if (this->actor.params < GND_FAKE_BOSS) {
         this->actor.params = GND_REAL_BOSS;
         this->actor.colChkInfo.health = 30;
-        this->lightNode = LightContext_InsertLight(globalCtx, &globalCtx->lightCtx, &this->lightInfo);
+        this->lightNode = LightContext_InsertLight(play, &play->lightCtx, &this->lightInfo);
         Lights_PointNoGlowSetInfo(&this->lightInfo, this->actor.world.pos.x, this->actor.world.pos.y,
                                   this->actor.world.pos.z, 255, 255, 255, 255);
-        BossGanondrof_SetupIntro(this, globalCtx);
+        BossGanondrof_SetupIntro(this, play);
     } else {
         BossGanondrof_SetupPaintings(this);
     }
 
-    Collider_InitCylinder(globalCtx, &this->colliderBody);
-    Collider_InitCylinder(globalCtx, &this->colliderSpear);
-    Collider_SetCylinder(globalCtx, &this->colliderBody, &this->actor, &sCylinderInitBody);
-    Collider_SetCylinder(globalCtx, &this->colliderSpear, &this->actor, &sCylinderInitSpear);
-    this->actor.flags &= ~ACTOR_FLAG_0;
-    if (Flags_GetClear(globalCtx, globalCtx->roomCtx.curRoom.num)) {
+    Collider_InitCylinder(play, &this->colliderBody);
+    Collider_InitCylinder(play, &this->colliderSpear);
+    Collider_SetCylinder(play, &this->colliderBody, &this->actor, &sCylinderInitBody);
+    Collider_SetCylinder(play, &this->colliderSpear, &this->actor, &sCylinderInitSpear);
+    this->actor.flags &= ~ACTOR_FLAG_TARGETABLE;
+    if (Flags_GetClear(play, play->roomCtx.curRoom.num)) {
         Actor_Kill(&this->actor);
-        Actor_Spawn(&globalCtx->actorCtx, globalCtx, ACTOR_DOOR_WARP1, GND_BOSSROOM_CENTER_X, GND_BOSSROOM_CENTER_Y,
-                    GND_BOSSROOM_CENTER_Z, 0, 0, 0, WARP_DUNGEON_ADULT);
-        Actor_Spawn(&globalCtx->actorCtx, globalCtx, ACTOR_ITEM_B_HEART, 200.0f + GND_BOSSROOM_CENTER_X,
-                    GND_BOSSROOM_CENTER_Y, GND_BOSSROOM_CENTER_Z, 0, 0, 0, 0);
+        Actor_Spawn(&play->actorCtx, play, ACTOR_DOOR_WARP1, GND_BOSSROOM_CENTER_X, GND_BOSSROOM_CENTER_Y,
+                    GND_BOSSROOM_CENTER_Z, 0, 0, 0, WARP_DUNGEON_ADULT, true);
+        Actor_Spawn(&play->actorCtx, play, ACTOR_ITEM_B_HEART, 200.0f + GND_BOSSROOM_CENTER_X,
+                    GND_BOSSROOM_CENTER_Y, GND_BOSSROOM_CENTER_Z, 0, 0, 0, 0, true);
     } else {
-        Actor_SpawnAsChild(&globalCtx->actorCtx, &this->actor, globalCtx, ACTOR_EN_FHG, this->actor.world.pos.x,
+        Actor_SpawnAsChild(&play->actorCtx, &this->actor, play, ACTOR_EN_FHG, this->actor.world.pos.x,
                            this->actor.world.pos.y, this->actor.world.pos.z, 0, 0, 0, this->actor.params);
+    }
+
+    for (int i = 0; i < ARRAY_COUNT(sDecayTex); i++) {
+        sDecayTex[i] = 0;
+    }
+
+    for (int i = 0; i < 5; i++) {
+        Gfx_RegisterBlendedTexture(sLimbTex_rgba16_8x8[i], sDecayTex, NULL);
+        Gfx_RegisterBlendedTexture(sLimbTex_rgba16_16x8[i], sDecayTex, NULL);
+    }
+    for (int i = 0; i < ARRAY_COUNT(sLimbTex_rgba16_16x16); i++) {
+        Gfx_RegisterBlendedTexture(sLimbTex_rgba16_16x16[i], sDecayTex, NULL);
+    }
+    for (int i = 0; i < ARRAY_COUNT(sLimbTex_rgba16_16x32); i++) {
+        Gfx_RegisterBlendedTexture(sLimbTex_rgba16_16x32[i], sDecayTex, NULL);
+    }
+    Gfx_RegisterBlendedTexture(gPhantomGanonLimbTex_00B380, sDecayTex, NULL);
+    Gfx_RegisterBlendedTexture(gPhantomGanonEyeTex, sDecayTex, NULL);
+    for (int i = 0; i < ARRAY_COUNT(sMouthTex_ci8_16x16); i++) {
+        Gfx_RegisterBlendedTexture(sMouthTex_ci8_16x16[i], sDecayTex, NULL);
     }
 }
 
-void BossGanondrof_Destroy(Actor* thisx, GlobalContext* globalCtx) {
+void BossGanondrof_Destroy(Actor* thisx, PlayState* play) {
     s32 pad;
     BossGanondrof* this = (BossGanondrof*)thisx;
 
     osSyncPrintf("DT1\n");
-    SkelAnime_Free(&this->skelAnime, globalCtx);
-    Collider_DestroyCylinder(globalCtx, &this->colliderBody);
-    Collider_DestroyCylinder(globalCtx, &this->colliderSpear);
+    SkelAnime_Free(&this->skelAnime, play);
+    Collider_DestroyCylinder(play, &this->colliderBody);
+    Collider_DestroyCylinder(play, &this->colliderSpear);
     if (this->actor.params == GND_REAL_BOSS) {
-        LightContext_RemoveLight(globalCtx, &globalCtx->lightCtx, this->lightNode);
+        LightContext_RemoveLight(play, &play->lightCtx, this->lightNode);
     }
 
     osSyncPrintf("DT2\n");
 }
 
-void BossGanondrof_SetupIntro(BossGanondrof* this, GlobalContext* globalCtx) {
+void BossGanondrof_SetupIntro(BossGanondrof* this, PlayState* play) {
     Animation_PlayLoop(&this->skelAnime, &gPhantomGanonRidePoseAnim);
     this->actionFunc = BossGanondrof_Intro;
     this->work[GND_MASK_OFF] = true;
 }
 
-void BossGanondrof_Intro(BossGanondrof* this, GlobalContext* globalCtx) {
+void BossGanondrof_Intro(BossGanondrof* this, PlayState* play) {
     s16 i;
     s32 pad;
     EnfHG* horse = (EnfHG*)this->actor.child;
@@ -369,7 +319,7 @@ void BossGanondrof_Intro(BossGanondrof* this, GlobalContext* globalCtx) {
         pos.y = this->bodyPartsPos[14].y + Rand_ZeroFloat(-5.0f);
         pos.z = this->bodyPartsPos[14].z + Rand_CenteredFloat(10.0f) + 5.0f;
         accel.y = 0.03f;
-        EffectSsKFire_Spawn(globalCtx, &pos, &vel, &accel, (s16)Rand_ZeroFloat(10.0f) + 5, 0);
+        EffectSsKFire_Spawn(play, &pos, &vel, &accel, (s16)Rand_ZeroFloat(10.0f) + 5, 0);
     }
 
     if (this->timers[1] == 20) {
@@ -399,7 +349,7 @@ void BossGanondrof_Intro(BossGanondrof* this, GlobalContext* globalCtx) {
 
         Animation_MorphToPlayOnce(&this->skelAnime, &gPhantomGanonRideSpearRaiseAnim, -7.0f);
         horseTemp = (EnfHG*)this->actor.child;
-        Actor_SpawnAsChild(&globalCtx->actorCtx, &this->actor, globalCtx, ACTOR_EN_FHG_FIRE, this->spearTip.x,
+        Actor_SpawnAsChild(&play->actorCtx, &this->actor, play, ACTOR_EN_FHG_FIRE, this->spearTip.x,
                            this->spearTip.y, this->spearTip.z, 50, FHGFIRE_LIGHT_GREEN, 0, FHGFIRE_SPEAR_LIGHT);
         this->actor.child = &horseTemp->actor;
     }
@@ -446,7 +396,7 @@ void BossGanondrof_SetupPaintings(BossGanondrof* this) {
     this->actionFunc = BossGanondrof_Paintings;
 }
 
-void BossGanondrof_Paintings(BossGanondrof* this, GlobalContext* globalCtx) {
+void BossGanondrof_Paintings(BossGanondrof* this, PlayState* play) {
     EnfHG* horse = (EnfHG*)this->actor.child;
 
     osSyncPrintf("RUN 1\n");
@@ -457,9 +407,9 @@ void BossGanondrof_Paintings(BossGanondrof* this, GlobalContext* globalCtx) {
         EnfHG* horseTemp;
 
         Animation_MorphToPlayOnce(&this->skelAnime, &gPhantomGanonRideSpearRaiseAnim, -2.0f);
-        this->actor.flags |= ACTOR_FLAG_0;
+        this->actor.flags |= ACTOR_FLAG_TARGETABLE;
         horseTemp = (EnfHG*)this->actor.child;
-        Actor_SpawnAsChild(&globalCtx->actorCtx, &this->actor, globalCtx, ACTOR_EN_FHG_FIRE, this->spearTip.x,
+        Actor_SpawnAsChild(&play->actorCtx, &this->actor, play, ACTOR_EN_FHG_FIRE, this->spearTip.x,
                            this->spearTip.y, this->spearTip.z, 30, FHGFIRE_LIGHT_GREEN, 0, FHGFIRE_SPEAR_LIGHT);
         this->actor.child = &horseTemp->actor;
     } else if (horse->bossGndSignal == FHG_LIGHTNING) {
@@ -468,7 +418,7 @@ void BossGanondrof_Paintings(BossGanondrof* this, GlobalContext* globalCtx) {
         Animation_MorphToPlayOnce(&this->skelAnime, &gPhantomGanonRideSpearResetAnim, -2.0f);
     } else if (horse->bossGndSignal == FHG_RIDE) {
         Animation_MorphToLoop(&this->skelAnime, &gPhantomGanonRideAnim, -2.0f);
-        this->actor.flags &= ~ACTOR_FLAG_0;
+        this->actor.flags &= ~ACTOR_FLAG_TARGETABLE;
     }
 
     osSyncPrintf("RUN 3\n");
@@ -495,16 +445,16 @@ void BossGanondrof_Paintings(BossGanondrof* this, GlobalContext* globalCtx) {
 void BossGanondrof_SetupNeutral(BossGanondrof* this, f32 arg1) {
     Animation_MorphToLoop(&this->skelAnime, &gPhantomGanonNeutralAnim, arg1);
     this->actionFunc = BossGanondrof_Neutral;
-    this->actor.flags |= ACTOR_FLAG_0;
+    this->actor.flags |= ACTOR_FLAG_TARGETABLE;
     this->fwork[GND_FLOAT_SPEED] = 0.0f;
     this->timers[0] = (s16)(Rand_ZeroOne() * 64.0f) + 30;
 }
 
-void BossGanondrof_Neutral(BossGanondrof* this, GlobalContext* globalCtx) {
+void BossGanondrof_Neutral(BossGanondrof* this, PlayState* play) {
     f32 targetX;
     f32 targetY;
     f32 targetZ;
-    Player* player = GET_PLAYER(globalCtx);
+    Player* player = GET_PLAYER(play);
     Actor* playerx = &player->actor;
     Actor* thisx = &this->actor;
     f32 rand01;
@@ -518,7 +468,7 @@ void BossGanondrof_Neutral(BossGanondrof* this, GlobalContext* globalCtx) {
                 rand01 = Rand_ZeroOne();
                 if (thisx->colChkInfo.health < 5) {
                     if (rand01 < 0.25f) {
-                        BossGanondrof_SetupThrow(this, globalCtx);
+                        BossGanondrof_SetupThrow(this, play);
                     } else if (rand01 >= 0.8f) {
                         this->flyMode = GND_FLY_CHARGE;
                         this->timers[0] = 60;
@@ -531,7 +481,7 @@ void BossGanondrof_Neutral(BossGanondrof* this, GlobalContext* globalCtx) {
                         Audio_PlayActorSound2(thisx, NA_SE_EN_FANTOM_LAUGH);
                     }
                 } else if ((rand01 < 0.5f) || (this->work[GND_THROW_COUNT] < 5)) {
-                    BossGanondrof_SetupThrow(this, globalCtx);
+                    BossGanondrof_SetupThrow(this, play);
                 } else {
                     this->flyMode = GND_FLY_VOLLEY;
                     this->timers[0] = 60;
@@ -566,7 +516,7 @@ void BossGanondrof_Neutral(BossGanondrof* this, GlobalContext* globalCtx) {
             if (this->timers[0] == 0) {
                 this->flyMode = GND_FLY_RETURN;
                 this->returnSuccess = false;
-                BossGanondrof_SetupThrow(this, globalCtx);
+                BossGanondrof_SetupThrow(this, play);
                 this->timers[0] = 80;
             }
             break;
@@ -579,7 +529,7 @@ void BossGanondrof_Neutral(BossGanondrof* this, GlobalContext* globalCtx) {
             targetZ += Math_CosS(this->work[GND_VARIANCE_TIMER] * 0x700) * 50.0f;
             if (this->returnSuccess) {
                 this->returnSuccess = false;
-                BossGanondrof_SetupReturn(this, globalCtx);
+                BossGanondrof_SetupReturn(this, play);
                 this->timers[0] = 80;
             }
 
@@ -595,7 +545,7 @@ void BossGanondrof_Neutral(BossGanondrof* this, GlobalContext* globalCtx) {
             targetX += Math_SinS(this->work[GND_VARIANCE_TIMER] * 0x500) * 100.0f;
             targetZ += Math_CosS(this->work[GND_VARIANCE_TIMER] * 0x700) * 100.0f;
             if (this->timers[0] == 0) {
-                BossGanondrof_SetupCharge(this, globalCtx);
+                BossGanondrof_SetupCharge(this, play);
             }
             break;
     }
@@ -623,19 +573,19 @@ void BossGanondrof_Neutral(BossGanondrof* this, GlobalContext* globalCtx) {
             pos.y = Rand_CenteredFloat(20.0f) + this->spearTip.y;
             pos.z = Rand_CenteredFloat(20.0f) + this->spearTip.z;
             accel.y = -0.08f;
-            EffectSsFhgFlash_SpawnLightBall(globalCtx, &pos, &vel, &accel, (s16)(Rand_ZeroOne() * 80.0f) + 150,
+            EffectSsFhgFlash_SpawnLightBall(play, &pos, &vel, &accel, (s16)(Rand_ZeroOne() * 80.0f) + 150,
                                             FHGFLASH_LIGHTBALL_GREEN);
         }
     }
 
     if (player->unk_A73 != 0) {
-        BossGanondrof_SetupBlock(this, globalCtx);
+        BossGanondrof_SetupBlock(this, play);
     }
 
     Audio_PlayActorSound2(thisx, NA_SE_EN_FANTOM_FLOAT - SFX_FLAG);
 }
 
-void BossGanondrof_SetupThrow(BossGanondrof* this, GlobalContext* globalCtx) {
+void BossGanondrof_SetupThrow(BossGanondrof* this, PlayState* play) {
     EnfHG* horseTemp;
     s16 lightTime;
 
@@ -653,14 +603,14 @@ void BossGanondrof_SetupThrow(BossGanondrof* this, GlobalContext* globalCtx) {
     }
 
     horseTemp = (EnfHG*)this->actor.child;
-    Actor_SpawnAsChild(&globalCtx->actorCtx, &this->actor, globalCtx, ACTOR_EN_FHG_FIRE, this->spearTip.x,
+    Actor_SpawnAsChild(&play->actorCtx, &this->actor, play, ACTOR_EN_FHG_FIRE, this->spearTip.x,
                        this->spearTip.y, this->spearTip.z, lightTime, FHGFIRE_LIGHT_GREEN, 0, FHGFIRE_SPEAR_LIGHT);
     this->actor.child = &horseTemp->actor;
     this->work[GND_THROW_COUNT]++;
     Audio_PlayActorSound2(&this->actor, NA_SE_EN_FANTOM_STICK);
 }
 
-void BossGanondrof_Throw(BossGanondrof* this, GlobalContext* globalCtx) {
+void BossGanondrof_Throw(BossGanondrof* this, PlayState* play) {
     SkelAnime_Update(&this->skelAnime);
     osSyncPrintf("this->fwork[GND_END_FRAME] = %d\n", (s16)this->fwork[GND_END_FRAME]);
     osSyncPrintf("this->work[GND_SHOT_FRAME] = %d\n", this->work[GND_THROW_FRAME]);
@@ -687,7 +637,7 @@ void BossGanondrof_Throw(BossGanondrof* this, GlobalContext* globalCtx) {
     if (Animation_OnFrame(&this->skelAnime, this->work[GND_THROW_FRAME])) {
         EnfHG* horseTemp = (EnfHG*)this->actor.child;
 
-        Actor_SpawnAsChild(&globalCtx->actorCtx, &this->actor, globalCtx, ACTOR_EN_FHG_FIRE, this->spearTip.x,
+        Actor_SpawnAsChild(&play->actorCtx, &this->actor, play, ACTOR_EN_FHG_FIRE, this->spearTip.x,
                            this->spearTip.y, this->spearTip.z, this->work[GND_ACTION_STATE], 0, 0, FHGFIRE_ENERGY_BALL);
         this->actor.child = &horseTemp->actor;
     }
@@ -700,7 +650,7 @@ void BossGanondrof_Throw(BossGanondrof* this, GlobalContext* globalCtx) {
     this->actor.world.pos.y += 2.0f * Math_SinS(this->work[GND_VARIANCE_TIMER] * 1500);
 }
 
-void BossGanondrof_SetupReturn(BossGanondrof* this, GlobalContext* globalCtx) {
+void BossGanondrof_SetupReturn(BossGanondrof* this, PlayState* play) {
     static AnimationHeader* returnAnim[] = { &gPhantomGanonReturn1Anim, &gPhantomGanonReturn2Anim };
     s16 rand = Rand_ZeroOne() * 1.99f;
 
@@ -709,7 +659,7 @@ void BossGanondrof_SetupReturn(BossGanondrof* this, GlobalContext* globalCtx) {
     this->actionFunc = BossGanondrof_Return;
 }
 
-void BossGanondrof_Return(BossGanondrof* this, GlobalContext* globalCtx) {
+void BossGanondrof_Return(BossGanondrof* this, PlayState* play) {
     SkelAnime_Update(&this->skelAnime);
     if (Animation_OnFrame(&this->skelAnime, 5.0f)) {
         Audio_PlayActorSound2(&this->actor, NA_SE_EN_FANTOM_VOICE);
@@ -728,12 +678,12 @@ void BossGanondrof_Return(BossGanondrof* this, GlobalContext* globalCtx) {
     this->actor.world.pos.y += 2.0f * Math_SinS(this->work[GND_VARIANCE_TIMER] * 1500);
     if (this->returnSuccess) {
         this->returnSuccess = false;
-        BossGanondrof_SetupReturn(this, globalCtx);
+        BossGanondrof_SetupReturn(this, play);
         this->timers[0] = 80;
     }
 }
 
-void BossGanondrof_SetupStunned(BossGanondrof* this, GlobalContext* globalCtx) {
+void BossGanondrof_SetupStunned(BossGanondrof* this, PlayState* play) {
     if (this->actionFunc != BossGanondrof_Stunned) {
         this->fwork[GND_END_FRAME] = Animation_GetLastFrame(&gPhantomGanonAirDamageAnim);
         Animation_MorphToLoop(&this->skelAnime, &gPhantomGanonAirDamageAnim, 0.0f);
@@ -750,7 +700,7 @@ void BossGanondrof_SetupStunned(BossGanondrof* this, GlobalContext* globalCtx) {
     this->actor.velocity.z = 0.0f;
 }
 
-void BossGanondrof_Stunned(BossGanondrof* this, GlobalContext* globalCtx) {
+void BossGanondrof_Stunned(BossGanondrof* this, PlayState* play) {
     osSyncPrintf("DAMAGE   .................................\n");
     SkelAnime_Update(&this->skelAnime);
     this->actor.gravity = -0.2f;
@@ -767,7 +717,7 @@ void BossGanondrof_Stunned(BossGanondrof* this, GlobalContext* globalCtx) {
             Audio_PlayActorSound2(&this->actor, NA_SE_EN_FANTOM_DAMAGE2);
         }
 
-        this->actor.flags |= ACTOR_FLAG_10;
+        this->actor.flags |= ACTOR_FLAG_DRAGGED_BY_HOOKSHOT;
     }
 
     osSyncPrintf("TIME0 %d ********************************************\n", this->timers[0]);
@@ -783,7 +733,7 @@ void BossGanondrof_Stunned(BossGanondrof* this, GlobalContext* globalCtx) {
     Actor_MoveForward(&this->actor);
 }
 
-void BossGanondrof_SetupBlock(BossGanondrof* this, GlobalContext* globalCtx) {
+void BossGanondrof_SetupBlock(BossGanondrof* this, PlayState* play) {
     this->fwork[GND_END_FRAME] = Animation_GetLastFrame(&gPhantomGanonBlockAnim);
     Animation_MorphToLoop(&this->skelAnime, &gPhantomGanonBlockAnim, -3.0f);
     this->actionFunc = BossGanondrof_Block;
@@ -791,7 +741,7 @@ void BossGanondrof_SetupBlock(BossGanondrof* this, GlobalContext* globalCtx) {
     Audio_PlayActorSound2(&this->actor, NA_SE_EN_FANTOM_STICK);
 }
 
-void BossGanondrof_Block(BossGanondrof* this, GlobalContext* globalCtx) {
+void BossGanondrof_Block(BossGanondrof* this, PlayState* play) {
     this->colliderBody.base.colType = COLTYPE_METAL;
     SkelAnime_Update(&this->skelAnime);
     this->actor.world.pos.x += this->actor.velocity.x;
@@ -806,7 +756,7 @@ void BossGanondrof_Block(BossGanondrof* this, GlobalContext* globalCtx) {
     }
 }
 
-void BossGanondrof_SetupCharge(BossGanondrof* this, GlobalContext* globalCtx) {
+void BossGanondrof_SetupCharge(BossGanondrof* this, PlayState* play) {
     this->fwork[GND_END_FRAME] = Animation_GetLastFrame(&gPhantomGanonChargeWindupAnim);
     Animation_MorphToLoop(&this->skelAnime, &gPhantomGanonChargeWindupAnim, -3.0f);
     this->actionFunc = BossGanondrof_Charge;
@@ -814,8 +764,8 @@ void BossGanondrof_SetupCharge(BossGanondrof* this, GlobalContext* globalCtx) {
     this->work[GND_ACTION_STATE] = CHARGE_WINDUP;
 }
 
-void BossGanondrof_Charge(BossGanondrof* this, GlobalContext* globalCtx) {
-    Player* player = GET_PLAYER(globalCtx);
+void BossGanondrof_Charge(BossGanondrof* this, PlayState* play) {
+    Player* player = GET_PLAYER(play);
     Actor* playerx = &player->actor;
     Actor* thisx = &this->actor;
     f32 dxCenter = thisx->world.pos.x - GND_BOSSROOM_CENTER_X;
@@ -929,7 +879,7 @@ void BossGanondrof_Charge(BossGanondrof* this, GlobalContext* globalCtx) {
             accel.x = (offset.x * -50.0f) / 1000.0f;
             accel.y = (offset.y * -50.0f) / 1000.0f;
             accel.z = (offset.z * -50.0f) / 1000.0f;
-            EffectSsFhgFlash_SpawnLightBall(globalCtx, &pos, &vel, &accel, 150, i % 7);
+            EffectSsFhgFlash_SpawnLightBall(play, &pos, &vel, &accel, 150, i % 7);
             this->work[GND_PARTICLE_ANGLE] += 0x1A5C;
         }
     }
@@ -937,32 +887,32 @@ void BossGanondrof_Charge(BossGanondrof* this, GlobalContext* globalCtx) {
     if (!(this->work[GND_VARIANCE_TIMER] & 7)) {
         EnfHG* horse = (EnfHG*)thisx->child;
 
-        Actor_SpawnAsChild(&globalCtx->actorCtx, thisx, globalCtx, ACTOR_EN_FHG_FIRE, this->spearTip.x,
+        Actor_SpawnAsChild(&play->actorCtx, thisx, play, ACTOR_EN_FHG_FIRE, this->spearTip.x,
                            this->spearTip.y, this->spearTip.z, 8, FHGFIRE_LIGHT_BLUE, 0, FHGFIRE_SPEAR_LIGHT);
         thisx->child = &horse->actor;
     }
 }
 
-void BossGanondrof_SetupDeath(BossGanondrof* this, GlobalContext* globalCtx) {
+void BossGanondrof_SetupDeath(BossGanondrof* this, PlayState* play) {
     Animation_PlayOnce(&this->skelAnime, &gPhantomGanonDeathBlowAnim);
     this->fwork[GND_END_FRAME] = Animation_GetLastFrame(&gPhantomGanonDeathBlowAnim);
     this->actionFunc = BossGanondrof_Death;
     Audio_QueueSeqCmd(0x1 << 28 | SEQ_PLAYER_BGM_MAIN << 24 | 0x100FF);
     Audio_PlayActorSound2(&this->actor, NA_SE_EN_FANTOM_DEAD);
     this->deathState = DEATH_START;
-    this->actor.flags &= ~ACTOR_FLAG_0;
+    this->actor.flags &= ~ACTOR_FLAG_TARGETABLE;
     this->work[GND_VARIANCE_TIMER] = 0;
     this->shockTimer = 50;
 }
 
-void BossGanondrof_Death(BossGanondrof* this, GlobalContext* globalCtx) {
+void BossGanondrof_Death(BossGanondrof* this, PlayState* play) {
     u8 holdCamera = false;
     u8 bodyDecayLevel = 0;
     f32 camX;
     f32 camZ;
     f32 pad;
-    Player* player = GET_PLAYER(globalCtx);
-    Camera* camera = Gameplay_GetCamera(globalCtx, 0);
+    Player* player = GET_PLAYER(play);
+    Camera* camera = Play_GetCamera(play, 0);
 
     osSyncPrintf("PYP %f\n", player->actor.floorHeight);
     SkelAnime_Update(&this->skelAnime);
@@ -974,12 +924,12 @@ void BossGanondrof_Death(BossGanondrof* this, GlobalContext* globalCtx) {
 
     switch (this->deathState) {
         case DEATH_START:
-            func_80064520(globalCtx, &globalCtx->csCtx);
-            func_8002DF54(globalCtx, &this->actor, 1);
-            this->deathCamera = Gameplay_CreateSubCamera(globalCtx);
-            Gameplay_ChangeCameraStatus(globalCtx, MAIN_CAM, CAM_STAT_WAIT);
+            func_80064520(play, &play->csCtx);
+            func_8002DF54(play, &this->actor, 1);
+            this->deathCamera = Play_CreateSubCamera(play);
+            Play_ChangeCameraStatus(play, MAIN_CAM, CAM_STAT_WAIT);
             osSyncPrintf("7\n");
-            Gameplay_ChangeCameraStatus(globalCtx, this->deathCamera, CAM_STAT_ACTIVE);
+            Play_ChangeCameraStatus(play, this->deathCamera, CAM_STAT_ACTIVE);
             osSyncPrintf("8\n");
             this->deathState = DEATH_THROES;
             player->actor.speedXZ = 0.0f;
@@ -1066,11 +1016,11 @@ void BossGanondrof_Death(BossGanondrof* this, GlobalContext* globalCtx) {
             if (this->timers[1] == 1) {
                 EnfHG* horseTemp = (EnfHG*)this->actor.child;
 
-                Actor_SpawnAsChild(&globalCtx->actorCtx, &this->actor, globalCtx, ACTOR_EN_FHG_FIRE,
+                Actor_SpawnAsChild(&play->actorCtx, &this->actor, play, ACTOR_EN_FHG_FIRE,
                                    GND_BOSSROOM_CENTER_X, GND_BOSSROOM_CENTER_Y + 3.0f, GND_BOSSROOM_CENTER_Z, 0x4000,
                                    0, 0, FHGFIRE_WARP_DEATH);
                 this->actor.child = &horseTemp->actor;
-                Message_StartTextbox(globalCtx, 0x108E, NULL);
+                Message_StartTextbox(play, 0x108E, NULL);
             }
 
             this->actor.shape.rot.y -= 0xC8;
@@ -1137,8 +1087,8 @@ void BossGanondrof_Death(BossGanondrof* this, GlobalContext* globalCtx) {
             bodyDecayLevel = 10;
             if (this->timers[0] == 150) {
                 Audio_QueueSeqCmd(SEQ_PLAYER_BGM_MAIN << 24 | NA_BGM_BOSS_CLEAR);
-                Actor_Spawn(&globalCtx->actorCtx, globalCtx, ACTOR_DOOR_WARP1, GND_BOSSROOM_CENTER_X,
-                            GND_BOSSROOM_CENTER_Y, GND_BOSSROOM_CENTER_Z, 0, 0, 0, WARP_DUNGEON_ADULT);
+                Actor_Spawn(&play->actorCtx, play, ACTOR_DOOR_WARP1, GND_BOSSROOM_CENTER_X,
+                            GND_BOSSROOM_CENTER_Y, GND_BOSSROOM_CENTER_Z, 0, 0, 0, WARP_DUNGEON_ADULT, true);
             }
 
             Math_ApproachZeroF(&this->cameraEye.y, 0.05f, 1.0f); // GND_BOSSROOM_CENTER_Y + 33.0f
@@ -1150,17 +1100,17 @@ void BossGanondrof_Death(BossGanondrof* this, GlobalContext* globalCtx) {
                 camera->eye = this->cameraEye;
                 camera->eyeNext = this->cameraEye;
                 camera->at = this->cameraAt;
-                func_800C08AC(globalCtx, this->deathCamera, 0);
+                func_800C08AC(play, this->deathCamera, 0);
                 this->deathCamera = 0;
-                func_80064534(globalCtx, &globalCtx->csCtx);
-                func_8002DF54(globalCtx, &this->actor, 7);
-                Actor_Spawn(&globalCtx->actorCtx, globalCtx, ACTOR_ITEM_B_HEART, GND_BOSSROOM_CENTER_X,
-                            GND_BOSSROOM_CENTER_Y, GND_BOSSROOM_CENTER_Z + 200.0f, 0, 0, 0, 0);
+                func_80064534(play, &play->csCtx);
+                func_8002DF54(play, &this->actor, 7);
+                Actor_Spawn(&play->actorCtx, play, ACTOR_ITEM_B_HEART, GND_BOSSROOM_CENTER_X,
+                            GND_BOSSROOM_CENTER_Y, GND_BOSSROOM_CENTER_Z + 200.0f, 0, 0, 0, 0, true);
                 this->actor.child = &horse->actor;
                 this->killActor = true;
                 horse->killActor = true;
-                Flags_SetClear(globalCtx, globalCtx->roomCtx.curRoom.num);
-                Flags_SetSwitch(globalCtx, 0x22);
+                Flags_SetClear(play, play->roomCtx.curRoom.num);
+                Flags_SetSwitch(play, 0x22);
             }
             break;
     }
@@ -1177,14 +1127,14 @@ void BossGanondrof_Death(BossGanondrof* this, GlobalContext* globalCtx) {
         vel.z = this->actor.world.pos.z - this->actor.prevPos.z;
         if (bodyDecayLevel < 10) {
             if (this->work[GND_DEATH_ENV_TIMER] == 0) {
-                if (globalCtx->envCtx.unk_BF == 0) {
-                    globalCtx->envCtx.unk_BF = 3;
+                if (play->envCtx.unk_BF == 0) {
+                    play->envCtx.unk_BF = 3;
                     this->work[GND_DEATH_ENV_TIMER] = (s16)Rand_ZeroFloat(5.0f) + 4.0f;
-                    globalCtx->envCtx.unk_D6 = 0x28;
+                    play->envCtx.unk_D6 = 0x28;
                 } else {
-                    globalCtx->envCtx.unk_BF = 0;
+                    play->envCtx.unk_BF = 0;
                     this->work[GND_DEATH_ENV_TIMER] = (s16)Rand_ZeroFloat(2.0f) + 2.0f;
-                    globalCtx->envCtx.unk_D6 = 0x14;
+                    play->envCtx.unk_D6 = 0x14;
                 }
             } else {
                 this->work[GND_DEATH_ENV_TIMER]--;
@@ -1208,16 +1158,16 @@ void BossGanondrof_Death(BossGanondrof* this, GlobalContext* globalCtx) {
                     accelHahen.z = (GND_BOSSROOM_CENTER_Z - pos.z) * 0.001f;
                 }
 
-                EffectSsKFire_Spawn(globalCtx, &pos, &vel, &accelKFire, (s16)Rand_ZeroFloat(20.0f) + 15,
+                EffectSsKFire_Spawn(play, &pos, &vel, &accelKFire, (s16)Rand_ZeroFloat(20.0f) + 15,
                                     bodyDecayLevel);
                 if ((Rand_ZeroOne() < 0.5f) || (bodyDecayLevel == 3)) {
-                    EffectSsHahen_Spawn(globalCtx, &pos, &vel, &accelHahen, 0, (s16)Rand_ZeroFloat(4.0f) + 7,
+                    EffectSsHahen_Spawn(play, &pos, &vel, &accelHahen, 0, (s16)Rand_ZeroFloat(4.0f) + 7,
                                         HAHEN_OBJECT_DEFAULT, 10, NULL);
                 }
             }
         } else {
-            globalCtx->envCtx.unk_BF = 0;
-            globalCtx->envCtx.unk_D6 = 0x14;
+            play->envCtx.unk_BF = 0;
+            play->envCtx.unk_D6 = 0x14;
         }
 
         this->work[GND_BODY_DECAY_FLAG] = true;
@@ -1253,11 +1203,11 @@ void BossGanondrof_Death(BossGanondrof* this, GlobalContext* globalCtx) {
             Math_ApproachF(&this->cameraSpeedMod, 1.0f, 1.0f, this->cameraAccel);
         }
 
-        Gameplay_CameraSetAtEye(globalCtx, this->deathCamera, &this->cameraAt, &this->cameraEye);
+        Play_CameraSetAtEye(play, this->deathCamera, &this->cameraAt, &this->cameraEye);
     }
 }
 
-void BossGanondrof_CollisionCheck(BossGanondrof* this, GlobalContext* globalCtx) {
+void BossGanondrof_CollisionCheck(BossGanondrof* this, PlayState* play) {
     s32 acHit;
     EnfHG* horse = (EnfHG*)this->actor.child;
     ColliderInfo* hurtbox;
@@ -1286,19 +1236,20 @@ void BossGanondrof_CollisionCheck(BossGanondrof* this, GlobalContext* globalCtx)
                         if (dmgFlags & 0x80) {
                             return;
                         }
-                        dmg = CollisionCheck_GetSwordDamage(dmgFlags);
+                        dmg = CollisionCheck_GetSwordDamage(dmgFlags, play);
                         (dmg == 0) ? (dmg = 2) : (canKill = true);
                         if (((s8)this->actor.colChkInfo.health > 2) || canKill) {
                             this->actor.colChkInfo.health -= dmg;
                         }
 
                         if ((s8)this->actor.colChkInfo.health <= 0) {
-                            BossGanondrof_SetupDeath(this, globalCtx);
-                            Enemy_StartFinishingBlow(globalCtx, &this->actor);
+                            BossGanondrof_SetupDeath(this, play);
+                            Enemy_StartFinishingBlow(play, &this->actor);
+                            gSaveContext.sohStats.itemTimestamp[TIMESTAMP_DEFEAT_PHANTOM_GANON] = GAMEPLAYSTAT_TOTAL_TIME;
                             return;
                         }
                     }
-                    BossGanondrof_SetupStunned(this, globalCtx);
+                    BossGanondrof_SetupStunned(this, play);
                     if (this->returnCount >= 2) {
                         this->timers[0] = 120;
                     }
@@ -1319,7 +1270,7 @@ void BossGanondrof_CollisionCheck(BossGanondrof* this, GlobalContext* globalCtx)
     }
 }
 
-void BossGanondrof_Update(Actor* thisx, GlobalContext* globalCtx) {
+void BossGanondrof_Update(Actor* thisx, PlayState* play) {
     f32 cs;
     f32 sn;
     f32 legRotTargetY;
@@ -1332,7 +1283,7 @@ void BossGanondrof_Update(Actor* thisx, GlobalContext* globalCtx) {
     EnfHG* horse;
 
     osSyncPrintf("MOVE START %d\n", this->actor.params);
-    this->actor.flags &= ~ACTOR_FLAG_10;
+    this->actor.flags &= ~ACTOR_FLAG_DRAGGED_BY_HOOKSHOT;
     this->colliderBody.base.colType = COLTYPE_HIT3;
     if (this->killActor) {
         Actor_Kill(&this->actor);
@@ -1342,7 +1293,7 @@ void BossGanondrof_Update(Actor* thisx, GlobalContext* globalCtx) {
     horse = (EnfHG*)this->actor.child;
     osSyncPrintf("MOVE START EEEEEEEEEEEEEEEEEEEEEE%d\n", this->actor.params);
 
-    this->actionFunc(this, globalCtx);
+    this->actionFunc(this, play);
 
     for (i = 0; i < ARRAY_COUNT(this->timers); i++) {
         if (this->timers[i]) {
@@ -1357,24 +1308,24 @@ void BossGanondrof_Update(Actor* thisx, GlobalContext* globalCtx) {
     }
 
     if (this->actionFunc != BossGanondrof_Death) {
-        BossGanondrof_CollisionCheck(this, globalCtx);
+        BossGanondrof_CollisionCheck(this, play);
     }
 
     osSyncPrintf("MOVE END\n");
     BossGanondrof_SetColliderPos(&this->targetPos, &this->colliderBody);
     BossGanondrof_SetColliderPos(&this->spearTip, &this->colliderSpear);
     if ((this->flyMode == GND_FLY_PAINTING) && !horse->bossGndInPainting) {
-        CollisionCheck_SetAC(globalCtx, &globalCtx->colChkCtx, &this->colliderBody.base);
+        CollisionCheck_SetAC(play, &play->colChkCtx, &this->colliderBody.base);
     }
     if ((this->actionFunc == BossGanondrof_Stunned) && (this->timers[0] > 1)) {
-        CollisionCheck_SetAC(globalCtx, &globalCtx->colChkCtx, &this->colliderBody.base);
-        CollisionCheck_SetOC(globalCtx, &globalCtx->colChkCtx, &this->colliderBody.base);
+        CollisionCheck_SetAC(play, &play->colChkCtx, &this->colliderBody.base);
+        CollisionCheck_SetOC(play, &play->colChkCtx, &this->colliderBody.base);
     } else if (this->actionFunc == BossGanondrof_Block) {
-        CollisionCheck_SetAC(globalCtx, &globalCtx->colChkCtx, &this->colliderBody.base);
+        CollisionCheck_SetAC(play, &play->colChkCtx, &this->colliderBody.base);
     } else if (this->actionFunc == BossGanondrof_Charge) {
-        CollisionCheck_SetAC(globalCtx, &globalCtx->colChkCtx, &this->colliderBody.base);
-        CollisionCheck_SetAT(globalCtx, &globalCtx->colChkCtx, &this->colliderBody.base);
-        CollisionCheck_SetAT(globalCtx, &globalCtx->colChkCtx, &this->colliderSpear.base);
+        CollisionCheck_SetAC(play, &play->colChkCtx, &this->colliderBody.base);
+        CollisionCheck_SetAT(play, &play->colChkCtx, &this->colliderBody.base);
+        CollisionCheck_SetAT(play, &play->colChkCtx, &this->colliderSpear.base);
     }
 
     this->actor.focus.pos = this->targetPos;
@@ -1400,7 +1351,7 @@ void BossGanondrof_Update(Actor* thisx, GlobalContext* globalCtx) {
         osSyncPrintf("F 1\n");
         for (j = 0; j < 7; j++) {
             osSyncPrintf("F 15\n");
-            EffectSsFhgFlash_SpawnShock(globalCtx, &this->actor, &this->actor.world.pos, 45, FHGFLASH_SHOCK_PG);
+            EffectSsFhgFlash_SpawnShock(play, &this->actor, &this->actor.world.pos, 45, FHGFLASH_SHOCK_PG);
         }
         osSyncPrintf("F 2\n");
     }
@@ -1411,7 +1362,7 @@ void BossGanondrof_Update(Actor* thisx, GlobalContext* globalCtx) {
     }
 }
 
-s32 BossGanondrof_OverrideLimbDraw(GlobalContext* globalCtx, s32 limbIndex, Gfx** dList, Vec3f* pos, Vec3s* rot,
+s32 BossGanondrof_OverrideLimbDraw(PlayState* play, s32 limbIndex, Gfx** dList, Vec3f* pos, Vec3s* rot,
                                    void* thisx) {
     BossGanondrof* this = (BossGanondrof*)thisx;
 
@@ -1481,7 +1432,7 @@ s32 BossGanondrof_OverrideLimbDraw(GlobalContext* globalCtx, s32 limbIndex, Gfx*
     return 0;
 }
 
-void BossGanondrof_PostLimbDraw(GlobalContext* globalCtx, s32 limbIndex, Gfx** dList, Vec3s* rot, void* thisx) {
+void BossGanondrof_PostLimbDraw(PlayState* play, s32 limbIndex, Gfx** dList, Vec3s* rot, void* thisx) {
     static Vec3f zeroVec = { 0.0f, 0.0f, 0.0f };
     static Vec3f spearVec = { 0.0f, 0.0f, 6000.0f };
 
@@ -1518,12 +1469,17 @@ Gfx* BossGanondrof_GetNullDList(GraphicsContext* gfxCtx) {
     return dList;
 }
 
-void BossGanondrof_Draw(Actor* thisx, GlobalContext* globalCtx) {
+void BossGanondrof_Draw(Actor* thisx, PlayState* play) {
     s32 pad;
     BossGanondrof* this = (BossGanondrof*)thisx;
     EnfHG* horse;
 
-    OPEN_DISPS(globalCtx->state.gfxCtx);
+    OPEN_DISPS(play->state.gfxCtx);
+
+    if (this->work[GND_BODY_DECAY_FLAG]) {
+        gSPInvalidateTexCache(POLY_OPA_DISP++, sDecayTex);
+    }
+
     osSyncPrintf("MOVE P = %x\n", this->actor.update);
     osSyncPrintf("STOP TIMER = %d ==============\n", this->actor.freezeTimer);
     horse = (EnfHG*)this->actor.child;
@@ -1532,7 +1488,7 @@ void BossGanondrof_Draw(Actor* thisx, GlobalContext* globalCtx) {
     }
 
     osSyncPrintf("YP %f\n", this->actor.world.pos.y);
-    func_80093D18(globalCtx->state.gfxCtx);
+    Gfx_SetupDL_25Opa(play->state.gfxCtx);
     if (this->work[GND_INVINC_TIMER] & 4) {
         POLY_OPA_DISP = Gfx_SetFog(POLY_OPA_DISP, 255, 50, 0, 0, 900, 1099);
     } else {
@@ -1546,15 +1502,15 @@ void BossGanondrof_Draw(Actor* thisx, GlobalContext* globalCtx) {
     gDPSetEnvColor(POLY_OPA_DISP++, (s16)this->fwork[GND_EYE_BRIGHTNESS], (s16)this->fwork[GND_EYE_BRIGHTNESS],
                    (s16)this->fwork[GND_EYE_BRIGHTNESS], (s16)this->fwork[GND_EYE_ALPHA]);
     if (this->work[GND_BODY_DECAY_FLAG]) {
-        gSPSegment(POLY_OPA_DISP++, 0x08, BossGanondrof_GetClearPixelDList(globalCtx->state.gfxCtx));
+        gSPSegment(POLY_OPA_DISP++, 0x08, BossGanondrof_GetClearPixelDList(play->state.gfxCtx));
     } else {
-        gSPSegment(POLY_OPA_DISP++, 0x08, BossGanondrof_GetNullDList(globalCtx->state.gfxCtx));
+        gSPSegment(POLY_OPA_DISP++, 0x08, BossGanondrof_GetNullDList(play->state.gfxCtx));
     }
 
-    SkelAnime_DrawOpa(globalCtx, this->skelAnime.skeleton, this->skelAnime.jointTable, BossGanondrof_OverrideLimbDraw,
+    SkelAnime_DrawOpa(play, this->skelAnime.skeleton, this->skelAnime.jointTable, BossGanondrof_OverrideLimbDraw,
                       BossGanondrof_PostLimbDraw, this);
     osSyncPrintf("DRAW 22\n");
-    POLY_OPA_DISP = Gameplay_SetFog(globalCtx, POLY_OPA_DISP);
-    CLOSE_DISPS(globalCtx->state.gfxCtx);
+    POLY_OPA_DISP = Play_SetFog(play, POLY_OPA_DISP);
+    CLOSE_DISPS(play->state.gfxCtx);
     osSyncPrintf("DRAW END %d\n", this->actor.params);
 }

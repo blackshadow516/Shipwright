@@ -11,7 +11,7 @@
 #include "utils.hpp"
 #include "shops.hpp"
 #include "hints.hpp"
-#include "Lib/nlohmann/json.hpp"
+#include <nlohmann/json.hpp>
 
 #include <cstdio>
 #include <cstdlib>
@@ -19,6 +19,7 @@
 #include <map>
 #include <set>
 #include <string>
+#include <sstream>
 #include <unordered_map>
 #include <vector>
 #include <iostream>
@@ -26,7 +27,7 @@
 #include <filesystem>
 #include <variables.h>
 
-#include "Window.h"
+#include <libultraship/libultraship.h>
 
 using json = nlohmann::json;
 
@@ -36,31 +37,21 @@ namespace {
 std::string placementtxt;
 } // namespace
 
-static RandomizerHash randomizerHash;
 static SpoilerData spoilerData;
 
 void GenerateHash() {
-    for (size_t i = 0; i < Settings::hashIconIndexes.size(); i++) {
-        int number = Settings::seed[i] - '0';
+    std::string hash = Settings::hash;
+    // adds leading 0s to the hash string if it has less than 10 digits.
+    while (hash.length() < 10) {
+        hash = "0" + hash;
+    }
+    for (size_t i = 0, j = 0; i < Settings::hashIconIndexes.size(); i++, j += 2) {
+        int number = std::stoi(hash.substr(j, 2));
         Settings::hashIconIndexes[i] = number;
     }
 
     // Clear out spoiler log data here, in case we aren't going to re-generate it
     // spoilerData = { 0 };
-}
-
-const RandomizerHash& GetRandomizerHash() {
-  return randomizerHash;
-}
-
-// Returns the randomizer hash as concatenated string, separated by comma.
-const std::string GetRandomizerHashAsString() {
-  std::string hash = "";
-  for (const std::string& str : randomizerHash) {
-    hash += str + ", ";
-  }
-  hash.erase(hash.length() - 2); // Erase last comma
-  return hash;
 }
 
 const SpoilerData& GetSpoilerData() {
@@ -305,26 +296,52 @@ static void WriteLocation(
 }
 
 //Writes a shuffled entrance to the specified node
-static void WriteShuffledEntrance(
-  tinyxml2::XMLElement* parentNode,
-  Entrance* entrance,
-  const bool withPadding = false
-) {
-  auto node = parentNode->InsertNewChildElement("entrance");
-  node->SetAttribute("name", entrance->GetName().c_str());
-  auto text = entrance->GetConnectedRegion()->regionName + " from " + entrance->GetReplacement()->GetParentRegion()->regionName;
-  node->SetText(text.c_str());
+static void WriteShuffledEntrance(std::string sphereString, Entrance* entrance) {
+  int16_t originalIndex = entrance->GetIndex();
+  int16_t destinationIndex = -1;
+  int16_t originalBlueWarp = entrance->GetBlueWarp();
+  int16_t replacementBlueWarp = -1;
+  int16_t replacementIndex = entrance->GetReplacement()->GetIndex();
+  int16_t replacementDestinationIndex = -1;
+  std::string name = entrance->GetName();
+  std::string text = entrance->GetConnectedRegion()->regionName + " from " + entrance->GetReplacement()->GetParentRegion()->regionName;
 
-  if (withPadding) {
-    constexpr int16_t LONGEST_NAME = 56; //The longest name of a vanilla entrance
-
-    //Insert padding so we get a kind of table in the XML document
-    int16_t requiredPadding = LONGEST_NAME - entrance->GetName().length();
-    if (requiredPadding > 0) {
-      std::string padding(requiredPadding, ' ');
-      node->SetAttribute("_", padding.c_str());
-    }
+  if (entrance->GetReverse() != nullptr && !entrance->IsDecoupled()) {
+    destinationIndex = entrance->GetReverse()->GetIndex();
+    replacementDestinationIndex = entrance->GetReplacement()->GetReverse()->GetIndex();
+    replacementBlueWarp = entrance->GetReplacement()->GetReverse()->GetBlueWarp();
   }
+
+  json entranceJson = json::object({
+    {"index", originalIndex},
+    {"destination", destinationIndex},
+    {"blueWarp", originalBlueWarp},
+    {"override", replacementIndex},
+    {"overrideDestination", replacementDestinationIndex},
+  });
+
+  jsonData["entrances"].push_back(entranceJson);
+
+  // When decoupled entrances is off, handle saving reverse entrances with blue warps
+  if (entrance->GetReverse() != nullptr && !entrance->IsDecoupled()) {
+    json reverseEntranceJson = json::object({
+      {"index", replacementDestinationIndex},
+      {"destination", replacementIndex},
+      {"blueWarp", replacementBlueWarp},
+      {"override", destinationIndex},
+      {"overrideDestination", originalIndex},
+    });
+
+    jsonData["entrances"].push_back(reverseEntranceJson);
+  }
+
+  switch (gSaveContext.language) {
+        case LANGUAGE_ENG:
+        case LANGUAGE_FRA:
+        default:
+            jsonData["entrancesMap"][sphereString][name] = text;
+            break;
+    }
 }
 
 // Writes the settings (without excluded locations, starting inventory and tricks) to the spoilerLog document.
@@ -345,7 +362,10 @@ static void WriteSettings(const bool printAll = false) {
             setting->GetName() == "Cuccos to return" ||
             setting->GetName() == "Skip Epona Race" ||
             setting->GetName() == "Skip Tower Escape" ||
-            setting->GetName() == "Skip Child Stealth") {
+            setting->GetName() == "Skip Child Stealth" ||
+            setting->GetName() == "Complete Mask Quest" ||
+            setting->GetName() == "Skip Scarecrow's Song" ||
+            setting->GetName() == "Enable Glitch-Useful Cutscenes") {
             std::string settingName = menu->name + ":" + setting->GetName();
             jsonData["settings"][settingName] = setting->GetSelectedOptionText();
         }
@@ -415,20 +435,41 @@ static void WriteStartingInventory() {
     &Settings::startingOthersOptions
   };
 
+  for (std::vector<Option*>* menu : startingInventoryOptions) {
+      for (size_t i = 0; i < menu->size(); ++i) {
+          const auto setting = menu->at(i);
+          // Starting Songs
+          if (setting->GetName() == "Start with Zelda's Lullaby" || 
+              setting->GetName() == "Start with Epona's Song" ||
+              setting->GetName() == "Start with Saria's Song" || 
+              setting->GetName() == "Start with Sun's Song" ||
+              setting->GetName() == "Start with Song of Time" || 
+              setting->GetName() == "Start with Song of Storms" ||
+              setting->GetName() == "Start with Minuet of Forest" || 
+              setting->GetName() == "Start with Bolero of Fire" ||
+              setting->GetName() == "Start with Serenade of Water" || 
+              setting->GetName() == "Start with Requiem of Spirit" ||
+              setting->GetName() == "Start with Nocturne of Shadow" || 
+              setting->GetName() == "Start with Prelude of Light") {
+              jsonData["settings"][setting->GetName()] = setting->GetSelectedOptionText();
+          }
+      }
+  }
   for (std::vector<Option *>* menu : startingInventoryOptions) {
     for (size_t i = 0; i < menu->size(); ++i) {
       const auto setting = menu->at(i);
-
+   
       // we need to write these every time because we're not clearing jsondata, so
       // the default logic of only writing it when we aren't using the default value
       // doesn't work, and because it'd be bad to set every single possible starting
       // inventory item as "false" in the json, we're just going to check
       // to see if the name is one of the 3 we're using rn
-      if(setting->GetName() == "Deku Shield" || setting->GetName() == "Kokiri Sword" || setting->GetName() == "Ocarina") {
-        jsonData["settings"]["Start With " + setting->GetName()] = setting->GetSelectedOptionText();
-      }
-
-      if (setting->GetName() == "Start with Consumables" || setting->GetName() == "Start with Max Rupees") {
+      if (setting->GetName() == "Start with Consumables" ||
+          setting->GetName() == "Start with Max Rupees" ||
+          setting->GetName() == "Gold Skulltula Tokens" ||
+          setting->GetName() == "Start with Fairy Ocarina" ||
+          setting->GetName() == "Start with Kokiri Sword" ||
+          setting->GetName() == "Start with Deku Shield") {
         jsonData["settings"][setting->GetName()] = setting->GetSelectedOptionText();
       }
     }
@@ -483,41 +524,32 @@ static void WriteEnabledGlitches(tinyxml2::XMLDocument& spoilerLog) {
 
 // Writes the Master Quest dungeons to the spoiler log, if there are any.
 static void WriteMasterQuestDungeons(tinyxml2::XMLDocument& spoilerLog) {
-  auto parentNode = spoilerLog.NewElement("master-quest-dungeons");
-
-  for (const auto* dungeon : Dungeon::dungeonList) {
-    if (dungeon->IsVanilla()) {
-      continue;
+    for (const auto* dungeon : Dungeon::dungeonList) {
+        std::string dungeonName;
+        if (dungeon->IsVanilla()) {
+            continue;
+        }
+        jsonData["masterQuestDungeons"].push_back(dungeon->GetName());
     }
-
-    auto node = parentNode->InsertNewChildElement("dungeon");
-    node->SetAttribute("name", dungeon->GetName().c_str());
-  }
-
-  if (!parentNode->NoChildren()) {
-    spoilerLog.RootElement()->InsertEndChild(parentNode);
-  }
 }
 
-// Writes the required trails to the spoiler log, if there are any.
-static void WriteRequiredTrials(tinyxml2::XMLDocument& spoilerLog) {
-  auto parentNode = spoilerLog.NewElement("required-trials");
-
-  for (const auto* trial : Trial::trialList) {
-    if (trial->IsSkipped()) {
-      continue;
+// Writes the required trials to the spoiler log, if there are any.
+static void WriteRequiredTrials() {
+    for (const auto& trial : Trial::trialList) {
+        if (trial->IsRequired()) {
+            std::string trialName;
+            switch (gSaveContext.language) {
+                case LANGUAGE_FRA:
+                    trialName = trial->GetName().GetFrench();
+                    break;
+                case LANGUAGE_ENG:
+                default:
+                    trialName = trial->GetName().GetEnglish();
+                    break;
+            }
+            jsonData["requiredTrials"].push_back(RemoveLineBreaks(trialName));
+        }
     }
-
-    auto node = parentNode->InsertNewChildElement("trial");
-    // PURPLE TODO: LOCALIZATION
-    std::string name = trial->GetName().GetEnglish();
-    name[0] = toupper(name[0]); // Capitalize T in "The"
-    node->SetAttribute("name", name.c_str());
-  }
-
-  if (!parentNode->NoChildren()) {
-    spoilerLog.RootElement()->InsertEndChild(parentNode);
-  }
 }
 
 // Writes the intended playthrough to the spoiler log, separated into spheres.
@@ -527,7 +559,7 @@ static void WritePlaythrough() {
   for (uint32_t i = 0; i < playthroughLocations.size(); ++i) {
     auto sphereNum = std::to_string(i);
     std::string sphereString =  "sphere ";
-    if (sphereNum.length() == 1) sphereString += "0";
+    if (i < 10) sphereString += "0";
     sphereString += sphereNum;
     for (const uint32_t key : playthroughLocations[i]) {
       WriteLocation(sphereString, key, true);
@@ -538,23 +570,16 @@ static void WritePlaythrough() {
 }
 
 //Write the randomized entrance playthrough to the spoiler log, if applicable
-static void WriteShuffledEntrances(tinyxml2::XMLDocument& spoilerLog) {
-    if (!Settings::ShuffleEntrances || noRandomEntrances) {
-        return;
+static void WriteShuffledEntrances() {
+  for (uint32_t i = 0; i < playthroughEntrances.size(); ++i) {
+    auto sphereNum = std::to_string(i);
+    std::string sphereString = "sphere ";
+    if (i < 10) sphereString += "0";
+    sphereString += sphereNum;
+    for (Entrance* entrance : playthroughEntrances[i]) {
+      WriteShuffledEntrance(sphereString, entrance);
     }
-
-    auto playthroughNode = spoilerLog.NewElement("entrance-playthrough");
-
-    for (uint32_t i = 0; i < playthroughEntrances.size(); ++i) {
-        auto sphereNode = playthroughNode->InsertNewChildElement("sphere");
-        sphereNode->SetAttribute("level", i + 1);
-
-        for (Entrance* entrance : playthroughEntrances[i]) {
-            WriteShuffledEntrance(sphereNode, entrance, true);
-        }
-    }
-
-    spoilerLog.RootElement()->InsertEndChild(playthroughNode);
+  }
 }
 
 // Writes the WOTH locations to the spoiler log, if there are any.
@@ -583,7 +608,8 @@ std::string AutoFormatHintTextString(std::string unformattedHintTextString) {
       textStr == "Sale petit garnement,&tu fais erreur!&C'est maintenant que marque&ta dernière heure!" ||
       textStr == "Gamin, ton destin achève,&sous mon sort tu périras!&Cette partie ne fut pas brève,&et cette mort, tu subiras!" ||
       textStr == "Oh! It's @.&I was expecting someone called Sheik.&Do you know what happened to them?" ||
-      textStr == "Ah, c'est @.&J'attendais un certain Sheik.&Tu sais ce qui lui est arrivé?") {
+      textStr == "Ah, c'est @.&J'attendais un certain Sheik.&Tu sais ce qui lui est arrivé?" ||
+      textStr == "They say \"Forgive me, but-^Your script will not be used.&....After all...^The one writing the rest of the script...&will be me.\"") {
     needsAutomaicNewlines = false;
   }
 
@@ -623,18 +649,36 @@ std::string AutoFormatHintTextString(std::string unformattedHintTextString) {
 static void WriteHints(int language) {
     std::string unformattedGanonText;
     std::string unformattedGanonHintText;
+    std::string unformattedDampesText;
+    std::string unformattedGregText;
 
     switch (language) {
         case 0:
         default:
             unformattedGanonText = GetGanonText().GetEnglish();
             unformattedGanonHintText = GetGanonHintText().GetEnglish();
+            unformattedDampesText = GetDampeHintText().GetEnglish();
+            unformattedGregText = GetGregHintText().GetEnglish();
+            jsonData["warpMinuetText"] = GetWarpMinuetText().GetEnglish();
+            jsonData["warpBoleroText"] = GetWarpBoleroText().GetEnglish();
+            jsonData["warpSerenadeText"] = GetWarpSerenadeText().GetEnglish();
+            jsonData["warpRequiemText"] = GetWarpRequiemText().GetEnglish();
+            jsonData["warpNocturneText"] = GetWarpNocturneText().GetEnglish();
+            jsonData["warpPreludeText"] = GetWarpPreludeText().GetEnglish();
             jsonData["childAltarText"] = GetChildAltarText().GetEnglish();
             jsonData["adultAltarText"] = GetAdultAltarText().GetEnglish();
             break;
         case 2:
             unformattedGanonText = GetGanonText().GetFrench();
             unformattedGanonHintText = GetGanonHintText().GetFrench();
+            unformattedDampesText = GetDampeHintText().GetFrench();
+            unformattedGregText = GetGregHintText().GetFrench();
+            jsonData["warpMinuetText"] = GetWarpMinuetText().GetFrench();
+            jsonData["warpBoleroText"] = GetWarpBoleroText().GetFrench();
+            jsonData["warpSerenadeText"] = GetWarpSerenadeText().GetFrench();
+            jsonData["warpRequiemText"] = GetWarpRequiemText().GetFrench();
+            jsonData["warpNocturneText"] = GetWarpNocturneText().GetFrench();
+            jsonData["warpPreludeText"] = GetWarpPreludeText().GetFrench();
             jsonData["childAltarText"] = GetChildAltarText().GetFrench();
             jsonData["adultAltarText"] = GetAdultAltarText().GetFrench();
             break;
@@ -642,9 +686,13 @@ static void WriteHints(int language) {
 
     std::string ganonText = AutoFormatHintTextString(unformattedGanonText);
     std::string ganonHintText = AutoFormatHintTextString(unformattedGanonHintText);
+    std::string dampesText = AutoFormatHintTextString(unformattedDampesText);
+    std::string gregText = AutoFormatHintTextString(unformattedGregText);
 
     jsonData["ganonText"] = ganonText;
     jsonData["ganonHintText"] = ganonHintText;
+    jsonData["dampeText"] = dampesText;
+    jsonData["gregText"] = gregText;
 
     if (Settings::GossipStoneHints.Is(HINTS_NO_HINTS)) {
         return;
@@ -671,16 +719,52 @@ static void WriteHints(int language) {
 static void WriteAllLocations(int language) {
     for (const uint32_t key : allLocations) {
         ItemLocation* location = Location(key);
+        std::string placedItemName;
 
         switch (language) {
-            case 0:
-            default:
-                jsonData["locations"][location->GetName()] = location->GetPlacedItemName().english;
-                break;
-            case 2:
-                jsonData["locations"][location->GetName()] = location->GetPlacedItemName().french;
-                break;
+          case 0:
+          default:
+            placedItemName = location->GetPlacedItemName().english;
+            break;
+          case 2:
+            placedItemName = location->GetPlacedItemName().french;
+            break;
         }
+
+        // If it's a simple item (not an ice trap, doesn't have a price)
+        // just add the name of the item and move on
+        if (!location->HasScrubsanityPrice() &&
+            !location->HasShopsanityPrice() &&
+            location->GetPlacedItemKey() != ICE_TRAP) {
+            
+            jsonData["locations"][location->GetName()] = placedItemName;
+            continue;
+        }
+
+        // We're dealing with a complex item, build out the json object for it
+        jsonData["locations"][location->GetName()]["item"] = placedItemName;
+
+        if (location->HasScrubsanityPrice() || location->HasShopsanityPrice()) {
+          jsonData["locations"][location->GetName()]["price"] = location->GetPrice();
+        }
+
+        if (location->GetPlacedItemKey() == ICE_TRAP) {
+          switch (language) {
+              case 0:
+              default:
+                  jsonData["locations"][location->GetName()]["model"] =
+                      ItemFromGIID(iceTrapModels[location->GetRandomizerCheck()]).GetName().english;
+                  jsonData["locations"][location->GetName()]["trickName"] = 
+                      GetIceTrapName(iceTrapModels[location->GetRandomizerCheck()]).english;
+                  break;
+              case 2:
+                  jsonData["locations"][location->GetName()]["model"] =
+                      ItemFromGIID(iceTrapModels[location->GetRandomizerCheck()]).GetName().french;
+                  jsonData["locations"][location->GetName()]["trickName"] =
+                      GetIceTrapName(iceTrapModels[location->GetRandomizerCheck()]).french;
+                  break;
+          }
+      }
     }
 }
 
@@ -691,11 +775,10 @@ const char* SpoilerLog_Write(int language) {
     auto rootNode = spoilerLog.NewElement("spoiler-log");
     spoilerLog.InsertEndChild(rootNode);
 
-    rootNode->SetAttribute("version", Settings::version.c_str());
-    rootNode->SetAttribute("seed", Settings::seed.c_str());
-    rootNode->SetAttribute("hash", GetRandomizerHashAsString().c_str());
-
     jsonData.clear();
+
+    jsonData["_version"] = (char*) gBuildVersion;
+    jsonData["_seed"] = Settings::seedString;
 
     // Write Hash
     int index = 0;
@@ -711,8 +794,8 @@ const char* SpoilerLog_Write(int language) {
     //if (Settings::Logic.Is(LOGIC_GLITCHED)) {
     //    WriteEnabledGlitches(spoilerLog);
     //}
-    //WriteMasterQuestDungeons(spoilerLog);
-    //WriteRequiredTrials(spoilerLog);
+    WriteMasterQuestDungeons(spoilerLog);
+    WriteRequiredTrials();
     WritePlaythrough();
     //WriteWayOfTheHeroLocation(spoilerLog);
 
@@ -721,20 +804,31 @@ const char* SpoilerLog_Write(int language) {
     wothLocations.clear();
 
     WriteHints(language);
-    //WriteShuffledEntrances(spoilerLog);
+    WriteShuffledEntrances();
     WriteAllLocations(language);
 
-    if (!std::filesystem::exists(Ship::Window::GetPathRelativeToAppDirectory("Randomizer"))) {
-        std::filesystem::create_directory(Ship::Window::GetPathRelativeToAppDirectory("Randomizer"));
+    if (!std::filesystem::exists(LUS::Context::GetPathRelativeToAppDirectory("Randomizer"))) {
+        std::filesystem::create_directory(LUS::Context::GetPathRelativeToAppDirectory("Randomizer"));
     }
 
     std::string jsonString = jsonData.dump(4);
-    std::ofstream jsonFile(Ship::Window::GetPathRelativeToAppDirectory(
-        (std::string("Randomizer/") + std::string(Settings::seed) + std::string(".json")).c_str()));
+    std::ostringstream fileNameStream;
+    for (int i = 0; i < Settings::hashIconIndexes.size(); i ++) {
+        if (i) {
+            fileNameStream << '-';
+        }
+        if (Settings::hashIconIndexes[i] < 10) {
+            fileNameStream << '0';
+        }
+        fileNameStream << std::to_string(Settings::hashIconIndexes[i]);
+    }
+    std::string fileName = fileNameStream.str();
+    std::ofstream jsonFile(LUS::Context::GetPathRelativeToAppDirectory(
+        (std::string("Randomizer/") + fileName + std::string(".json")).c_str()));
     jsonFile << std::setw(4) << jsonString << std::endl;
     jsonFile.close();
 
-    return Settings::seed.c_str();
+    return fileName.c_str();
 }
 
 void PlacementLog_Msg(std::string_view msg) {
@@ -753,8 +847,7 @@ bool PlacementLog_Write() {
     placementLog.InsertEndChild(rootNode);
 
     rootNode->SetAttribute("version", Settings::version.c_str());
-    rootNode->SetAttribute("seed", Settings::seed.c_str());
-    rootNode->SetAttribute("hash", GetRandomizerHashAsString().c_str());
+    rootNode->SetAttribute("seed", Settings::seed);
 
     // WriteSettings(placementLog, true); // Include hidden settings.
     // WriteExcludedLocations(placementLog);
@@ -762,7 +855,7 @@ bool PlacementLog_Write() {
     WriteEnabledTricks(placementLog);
     WriteEnabledGlitches(placementLog);
     WriteMasterQuestDungeons(placementLog);
-    WriteRequiredTrials(placementLog);
+    //WriteRequiredTrials(placementLog);
 
     placementtxt = "\n" + placementtxt;
 

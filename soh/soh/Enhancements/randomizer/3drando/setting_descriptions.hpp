@@ -22,8 +22,8 @@ extern string_view kakGateOpen;
 extern string_view kakGateClosed;
 
 extern string_view doorOfTimeOpen;
+extern string_view doorOfTimeSongOnly;
 extern string_view doorOfTimeClosed;
-extern string_view doorOfTimeIntended;
 
 extern string_view fountainNormal;
 extern string_view fountainAdult;
@@ -40,12 +40,15 @@ extern string_view bridgeMedallions;
 extern string_view bridgeRewards;
 extern string_view bridgeDungeons;
 extern string_view bridgeTokens;
+extern string_view bridgeGreg;
 
 extern string_view bridgeStoneCountDesc;
 extern string_view bridgeMedallionCountDesc;
 extern string_view bridgeRewardCountDesc;
 extern string_view bridgeDungeonCountDesc;
 extern string_view bridgeTokenCountDesc;
+
+extern string_view bridgeRewardOptionsDesc;
 
 extern string_view randomGanonsTrialsDesc;
 
@@ -57,9 +60,25 @@ extern string_view shuffleEntrancesDesc;
 
 extern string_view dungeonEntrancesDesc;
 
+extern string_view bossEntrancesDesc;
+
 extern string_view overworldEntrancesDesc;
 
 extern string_view grottoEntrancesDesc;
+
+extern string_view owlDropsDesc;
+
+extern string_view warpSongsDesc;
+
+extern string_view overworldSpawnsDesc;
+
+extern string_view mixedPoolsDesc;
+extern string_view mixDungeonsDesc;
+extern string_view mixOverworldDesc;
+extern string_view mixInteriorsDesc;
+extern string_view mixGrottosDesc;
+
+extern string_view decoupledEntrancesDesc;
 
 extern string_view interiorEntrancesOff;
 extern string_view interiorEntrancesSimple;
@@ -101,6 +120,13 @@ extern string_view shopsThree;
 extern string_view shopsFour;
 extern string_view shopsRandom;
 
+extern string_view shopPriceBalanced;
+extern string_view shopPriceStarter;
+extern string_view shopPriceAdult;
+extern string_view shopPriceGiant;
+extern string_view shopPriceTycoon;
+extern string_view shopPriceAffordable;   
+
 extern string_view tokensOff;
 extern string_view tokensDungeon;
 extern string_view tokensOverworld;
@@ -126,9 +152,13 @@ extern string_view magicBeansDesc;
 extern string_view merchantsDesc;
 extern string_view merchantsHintsDesc;
 
+extern string_view frogSongRupeesDesc;
+
 extern string_view adultTradeDesc;
 
 extern string_view chestMinigameDesc;
+
+extern string_view shuffle100GsDesc;
 
 extern string_view mapCompassStartWith;
 extern string_view mapCompassVanilla;
@@ -165,12 +195,15 @@ extern string_view ganonKeyAnyDungeon;
 extern string_view ganonKeyOverworld;
 extern string_view ganonKeyAnywhere;
 extern string_view ganonKeyLACS;
+extern string_view ganonKey100GS;
 
-extern string_view lacsMedallionCountDesc;
 extern string_view lacsStoneCountDesc;
+extern string_view lacsMedallionCountDesc;
 extern string_view lacsRewardCountDesc;
 extern string_view lacsDungeonCountDesc;
 extern string_view lacsTokenCountDesc;
+
+extern string_view lacsRewardOptionsDesc;
 
 extern string_view childStealthDesc;
 
@@ -195,6 +228,8 @@ extern string_view kingZoraSpeedVanilla;
 extern string_view kingZoraSpeedRandom;
 
 extern string_view completeMaskDesc;
+
+extern string_view glitchCutscenesDesc;
 
 extern string_view quickTextDesc0;
 extern string_view quickTextDesc1;
@@ -279,6 +314,9 @@ extern string_view childZoraTunicDesc;
 extern string_view gkDurabilityVanilla;
 extern string_view gkDurabilityRandomRisk;
 extern string_view gkDurabilityRandomSafe;
+
+extern string_view blueFireArrowsDesc;
+extern string_view sunlightArrowsDesc;
 
 extern string_view mp_EnabledDesc;
 extern string_view mp_SharedProgressDesc;
@@ -397,6 +435,7 @@ extern string_view LogicShadowFireArrowEntryDesc;
 extern string_view LogicShadowUmbrellaDesc;
 extern string_view LogicShadowFreestandingKeyDesc;
 extern string_view LogicShadowStatueDesc;
+extern string_view LogicShadowBongoDesc;
 extern string_view LogicChildDeadhandDesc;
 extern string_view LogicGtgWithoutHookshotDesc;
 extern string_view LogicGtgFakeWallDesc;

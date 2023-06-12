@@ -48,7 +48,7 @@ std::vector<uint32_t> GetMinVanillaShopItems(int total_replaced) {
     BUY_ARROWS_10,
     BUY_ARROWS_30,
     BUY_ARROWS_50,
-    BUY_BOMBCHU_5,
+    BUY_BOMBCHU_10,
     BUY_BOMBCHU_10,
     BUY_BOMBCHU_10,
     BUY_BOMBCHU_20,
@@ -127,15 +127,64 @@ static constexpr std::array<double, 60> ShopPriceProbability= {
   0.833208595, 0.849243398, 0.864579161, 0.879211177, 0.893112051, 0.906263928, 0.918639420, 0.930222611, 0.940985829, 0.950914731,
   0.959992180, 0.968187000, 0.975495390, 0.981884488, 0.987344345, 0.991851853, 0.995389113, 0.997937921, 0.999481947, 1.000000000,
 };
-int GetRandomShopPrice() {
-  double random = RandomDouble(); //Randomly generated probability value
-  for (size_t i = 0; i < ShopPriceProbability.size(); i++) {
-    if (random < ShopPriceProbability[i]) {
-      //The randomly generated value has surpassed the total probability up to this point, so this is the generated price
-      return i * 5; //i in range [0, 59], output in range [0, 295] in increments of 5
+
+// Generate random number from 5 to wallet max
+int GetPriceFromMax(int max) {
+    return Random(1, max) * 5; // random range of 1 - wallet max / 5, where wallet max is the highest it goes as a multiple of 5
+}
+
+// Get random price out of available "affordable prices", or just return 10 if Starter wallet is selected (no need to randomly select
+// from a single element)
+int GetPriceAffordable() {
+    if (Settings::ShopsanityPrices.Is(RO_SHOPSANITY_PRICE_STARTER)) {
+        return 10;
     }
-  }
-  return -1; //Shouldn't happen
+
+    static const std::vector<int> affordablePrices = { 10, 105, 205, 505 };
+    std::vector<int> priceList;
+    uint8_t maxElements = Settings::ShopsanityPrices.Value<uint8_t>();
+    for (int i = 0; i < maxElements; i++) {
+        priceList.push_back(affordablePrices.at(i));
+    }
+    return RandomElement(priceList);
+}
+
+int GetRandomShopPrice() {
+    // If Shopsanity prices aren't Balanced, but Affordable is on, don't GetPriceFromMax
+    if (Settings::ShopsanityPricesAffordable.Is(true) && Settings::ShopsanityPrices.IsNot(RO_SHOPSANITY_PRICE_BALANCED)) {
+        return GetPriceAffordable();
+    }
+
+    // max 0 means Balanced is selected, and thus shouldn't trigger GetPriceFromMax
+    int max = 0;
+
+    // check settings for a wallet tier selection and set max amount as method for setting true randomization
+    if(Settings::ShopsanityPrices.Is(RO_SHOPSANITY_PRICE_STARTER)) {
+        max = 19; // 95/5
+    }
+    else if (Settings::ShopsanityPrices.Is(RO_SHOPSANITY_PRICE_ADULT)) {
+        max = 40; // 200/5
+    }
+    else if (Settings::ShopsanityPrices.Is(RO_SHOPSANITY_PRICE_GIANT)) {
+        max = 100; // 500/5
+    }
+    else if (Settings::ShopsanityPrices.Is(RO_SHOPSANITY_PRICE_TYCOON)) {
+        max = 199; // 995/5
+    }
+    if (max != 0) {
+        return GetPriceFromMax(max);
+    }
+    // Balanced is default, so if all other known cases fail, fall back to Balanced
+    int price = 150; // JUST in case something fails with the randomization, return sane price for balanced
+    double random = RandomDouble(); //Randomly generated probability value
+    for (size_t i = 0; i < ShopPriceProbability.size(); i++) {
+        if (random < ShopPriceProbability[i]) {
+        //The randomly generated value has surpassed the total probability up to this point, so this is the generated price
+            price = i * 5; //i in range [0, 59], output in range [0, 295] in increments of 5
+            break;
+        }
+    }
+    return price;
 }
 
 //Similar to above, beta distribution with alpha = 1, beta = 2,
@@ -239,7 +288,7 @@ void InitTrickNames() {
      Text{"Skull Hammer", "Maillet Ressort", "Martillo de hierro"}};
   trickNameTable[GI_STONE_OF_AGONY] = {
      Text{"Shard of Agahnim", "Fragment d'Agahnim", "Piedra de Agahnim"},
-     Text{"Stone of Agony", "Pierre de Souffrance", "Fragmento de la Agonía"},
+     Text{"Shard of Agony", "Fragment de Souffrance", "Piedra de la Agonía"},
      Text{"Pirate's Charm", "Pierre de Pirate", "Amuleto Pirata"}};
   trickNameTable[GI_DINS_FIRE] = {
      Text{"Eldin's Fire", "Feu d'Eldin", "Fuego de Eldin"},

@@ -3,19 +3,19 @@
 #include "../ZAPD/ZFile.h"
 #include <Utils/MemoryStream.h>
 #include <Utils/BitConverter.h>
-#include "Lib/StrHash64.h"
+#include "StrHash64/StrHash64.h"
 #include "spdlog/spdlog.h"
-#include "PR/ultra64/gbi.h"
+#include <libultraship/libultra/gbi.h>
 #include <Globals.h>
 #include <iostream>
 #include <string>
 #include "MtxExporter.h"
-#include <Utils/File.h>
+#include <Utils/DiskFile.h>
 #include "VersionInfo.h"
 
 #define GFX_SIZE 8
 
-#define gsDPSetCombineLERP2(a0, b0, c0, d0, Aa0, Ab0, Ac0, Ad0,      \
+#define gsDPSetCombineLERP_NoMacros(a0, b0, c0, d0, Aa0, Ab0, Ac0, Ad0,      \
         a1, b1, c1, d1, Aa1, Ab1, Ac1, Ad1)         \
 {                                   \
     _SHIFTL(G_SETCOMBINE, 24, 8) |                  \
@@ -50,7 +50,7 @@ void OTRExporter_DisplayList::Save(ZResource* res, const fs::path& outPath, Bina
 
 	//printf("Exporting DList %s\n", dList->GetName().c_str());
 
-	WriteHeader(res, outPath, writer, Ship::ResourceType::DisplayList);
+	WriteHeader(res, outPath, writer, LUS::ResourceType::DisplayList);
 
 	while (writer->GetBaseAddress() % 8 != 0)
 		writer->Write((uint8_t)0xFF);
@@ -76,7 +76,7 @@ void OTRExporter_DisplayList::Save(ZResource* res, const fs::path& outPath, Bina
 		F3DZEXOpcode opF3D = (F3DZEXOpcode)opcode;
 
 		if ((int)opF3D == G_DL)// || (int)opF3D == G_BRANCH_Z)
-			opcode = (uint8_t)G_DL_OTR;
+			opcode = (uint8_t)G_DL_OTR_HASH;
 
 		if ((int)opF3D == G_MTX)
 			opcode = (uint8_t)G_MTX_OTR;
@@ -85,10 +85,10 @@ void OTRExporter_DisplayList::Save(ZResource* res, const fs::path& outPath, Bina
 			opcode = (uint8_t)G_BRANCH_Z_OTR;
 
 		if ((int)opF3D == G_VTX)
-			opcode = (uint8_t)G_VTX_OTR;
+			opcode = (uint8_t)G_VTX_OTR_HASH;
 
 		if ((int)opF3D == G_SETTIMG)
-			opcode = (uint8_t)G_SETTIMG_OTR;
+			opcode = (uint8_t)G_SETTIMG_OTR_HASH;
 
 		word0 += (opcode << 24);
 
@@ -356,7 +356,7 @@ void OTRExporter_DisplayList::Save(ZResource* res, const fs::path& outPath, Bina
 					//std::string fName = StringHelper::Sprintf("%s\\%s", GetParentFolderName(res).c_str(), dListDecl2->varName.c_str());
 					std::string fName = OTRExporter_DisplayList::GetPathToRes(res, dListDecl2->varName.c_str());
 
-					if (files.find(fName) == files.end() && !File::Exists("Extract/" + fName))
+					if (files.find(fName) == files.end() && !DiskFile::Exists("Extract/" + fName))
 					{
 						MemoryStream* dlStream = new MemoryStream();
 						BinaryWriter dlWriter = BinaryWriter(dlStream);
@@ -442,7 +442,7 @@ void OTRExporter_DisplayList::Save(ZResource* res, const fs::path& outPath, Bina
 						//std::string fName = StringHelper::Sprintf("%s\\%s", GetParentFolderName(res).c_str(), dListDecl2->varName.c_str());
 						std::string fName = OTRExporter_DisplayList::GetPathToRes(res, dListDecl2->varName.c_str());
 
-						if (files.find(fName) == files.end() && !File::Exists("Extract/" + fName))
+						if (files.find(fName) == files.end() && !DiskFile::Exists("Extract/" + fName))
 						{
 							MemoryStream* dlStream = new MemoryStream();
 							BinaryWriter dlWriter = BinaryWriter(dlStream);
@@ -607,7 +607,7 @@ void OTRExporter_DisplayList::Save(ZResource* res, const fs::path& outPath, Bina
 			int32_t ab1 = (data & 0b00000000000000000000000000000000000000000000000000000000111000) >> 3;
 			int32_t ad1 = (data & 0b00000000000000000000000000000000000000000000000000000000000111) >> 0;
 
-			Gfx value = {gsDPSetCombineLERP2(a0, b0, c0, d0, aa0, ab0, ac0, ad0, a1, b1, c1, d1, aa1, ab1, ac1, ad1)};
+			Gfx value = { gsDPSetCombineLERP_NoMacros(a0, b0, c0, d0, aa0, ab0, ac0, ad0, a1, b1, c1, d1, aa1, ab1, ac1, ad1)};
 			word0 = value.words.w0;
 			word1 = value.words.w1;
 		}
@@ -653,8 +653,13 @@ void OTRExporter_DisplayList::Save(ZResource* res, const fs::path& outPath, Bina
 			uint32_t seg = data & 0xFFFFFFFF;
 			int32_t texAddress = Seg2Filespace(data, dList->parent->baseAddress);
 
-			if (!Globals::Instance->HasSegment(GETSEGNUM(seg), res->parent->workerID))
+			if (!Globals::Instance->HasSegment(GETSEGNUM(seg), res->parent->workerID) || (res->GetName() == "sShadowMaterialDL"))
 			{
+				if (res->GetName() == "sShadowMaterialDL") {
+					// sShadowMaterialDL (In ovl_En_Jsjutan) has a texture in bss. This is a hack to override the reference to one
+					// to segment C. The actor has been modified to load the texture into segment C.
+					seg = 0x0C000000;
+				}
 				int32_t __ = (data & 0x00FF000000000000) >> 48;
 				int32_t www = (data & 0x00000FFF00000000) >> 32;
 
@@ -681,7 +686,7 @@ void OTRExporter_DisplayList::Save(ZResource* res, const fs::path& outPath, Bina
 
 				Gfx value = {gsDPSetTextureImage(fmt, siz, www + 1, __)};
 				word0 = value.words.w0 & 0x00FFFFFF;
-				word0 += (G_SETTIMG_OTR << 24);
+				word0 += (G_SETTIMG_OTR_HASH << 24);
 				//word1 = value.words.w1;
 				word1 = 0;
 
@@ -749,7 +754,7 @@ void OTRExporter_DisplayList::Save(ZResource* res, const fs::path& outPath, Bina
 
 					word0 = value.words.w0;
 					word0 &= 0x00FFFFFF;
-					word0 += (G_VTX_OTR << 24);
+					word0 += (G_VTX_OTR_HASH << 24);
 					word1 = value.words.w1;
 
 					writer->Write(word0);
@@ -762,7 +767,7 @@ void OTRExporter_DisplayList::Save(ZResource* res, const fs::path& outPath, Bina
 					word0 = hash >> 32;
 					word1 = hash & 0xFFFFFFFF;
 
-					if (files.find(fName) == files.end() && !File::Exists("Extract/" + fName))
+					if (files.find(fName) == files.end() && !DiskFile::Exists("Extract/" + fName))
 					{
 						// Write vertices to file
 						MemoryStream* vtxStream = new MemoryStream();
@@ -781,7 +786,7 @@ void OTRExporter_DisplayList::Save(ZResource* res, const fs::path& outPath, Bina
 						}
 
 						// OTRTODO: Once we aren't relying on text representations, we should call ArrayExporter...
-						OTRExporter::WriteHeader(nullptr, "", &vtxWriter, Ship::ResourceType::Array);
+						OTRExporter::WriteHeader(nullptr, "", &vtxWriter, LUS::ResourceType::Array);
 
 						vtxWriter.Write((uint32_t)ZResourceType::Vertex);
 						vtxWriter.Write((uint32_t)arrCnt);
@@ -877,8 +882,14 @@ std::string OTRExporter_DisplayList::GetPrefix(ZResource* res)
 	std::string prefix = "";
 	std::string xmlPath = StringHelper::Replace(res->parent->GetXmlFilePath().string(), "\\", "/");
 
-	if (StringHelper::Contains(oName, "_scene") || StringHelper::Contains(oName, "_room"))
+	if (StringHelper::Contains(oName, "_scene") || StringHelper::Contains(oName, "_room")) {
 		prefix = "scenes";
+        if (Globals::Instance->rom->IsMQ()) {
+            prefix += "/mq";
+        } else {
+            prefix += "/nonmq";
+        }
+    }
 	else if (StringHelper::Contains(xmlPath, "objects/"))
 		prefix = "objects";
 	else if (StringHelper::Contains(xmlPath, "textures/"))

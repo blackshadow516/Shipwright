@@ -9,7 +9,7 @@
 #include "settings.hpp"
 #include "spoiler_log.hpp"
 #include "z64item.h"
-#include <Lib/spdlog/include/spdlog/spdlog.h>
+#include <spdlog/spdlog.h>
 
 
 using namespace Settings;
@@ -64,7 +64,7 @@ const std::array<uint32_t, 59> alwaysItems = {
   DINS_FIRE,
   FARORES_WIND,
   NAYRUS_LOVE,
-  GREEN_RUPEE,
+  GREG_RUPEE,
   PROGRESSIVE_HOOKSHOT,  //2 progressive hookshots
   PROGRESSIVE_HOOKSHOT,
   DEKU_SHIELD,
@@ -725,8 +725,19 @@ void GenerateItemPool() {
       AddItemToMainPool(BOMBCHU_10);
     }
   } else {
+    PlaceItemInLocation(KAK_GRANNYS_SHOP, BLUE_POTION_REFILL, false, true);
     PlaceItemInLocation(GC_MEDIGORON, GIANTS_KNIFE, false, true);
     PlaceItemInLocation(WASTELAND_BOMBCHU_SALESMAN, BOMBCHU_10, false, true);
+  }
+
+  if (ShuffleFrogSongRupees) {
+    AddItemToMainPool(PURPLE_RUPEE, 5);
+  } else {
+    PlaceItemInLocation(ZR_FROGS_ZELDAS_LULLABY, PURPLE_RUPEE, false, true);
+    PlaceItemInLocation(ZR_FROGS_EPONAS_SONG, PURPLE_RUPEE, false, true);
+    PlaceItemInLocation(ZR_FROGS_SARIAS_SONG, PURPLE_RUPEE, false, true);
+    PlaceItemInLocation(ZR_FROGS_SUNS_SONG, PURPLE_RUPEE, false, true);
+    PlaceItemInLocation(ZR_FROGS_SONG_OF_TIME, PURPLE_RUPEE, false, true);
   }
 
   if (ShuffleAdultTradeQuest) {
@@ -786,6 +797,15 @@ void GenerateItemPool() {
     }
   } else {
     AddItemToMainPool(GOLD_SKULLTULA_TOKEN, 100);
+  }
+
+  if (Shuffle100GSReward) {
+    if (Tokensanity.IsNot(TOKENSANITY_OFF) && ItemPoolValue.Is(ITEMPOOL_PLENTIFUL)) {
+      AddItemToPool(PendingJunkPool, GOLD_SKULLTULA_TOKEN, 10);
+    }
+    AddItemToMainPool(HUGE_RUPEE);
+  } else {
+    PlaceItemInLocation(KAK_100_GOLD_SKULLTULA_REWARD, HUGE_RUPEE, false, true);
   }
 
   if (BombchusInLogic) {
@@ -864,7 +884,7 @@ void GenerateItemPool() {
   //Keys
 
   //For key rings, need to add as many junk items as "missing" keys
-  if (KeyRings) {
+  if (KeyRings.IsNot(KEYRINGS_OFF)) {
     uint8_t ringJunkAmt = 0;
     for (auto dungeon : dungeonList) {
       if (dungeon->HasKeyRing()) {
@@ -1052,7 +1072,11 @@ void GenerateItemPool() {
   IceTrapModels.push_back(ItemTable(RandomElement(bottles)).GetItemID()); //Get one random bottle type for ice traps
   for (uint8_t i = 0; i < bottleCount; i++) {
     if (i >= rutoBottles) {
-      AddRandomBottle(bottles);
+      if ((i == bottleCount - 1) && ShuffleMerchants.IsNot(SHUFFLEMERCHANTS_OFF)) {
+        AddItemToMainPool(BOTTLE_WITH_BLUE_POTION);
+      } else {
+        AddRandomBottle(bottles);
+      }
     } else {
       AddItemToMainPool(RUTOS_LETTER);
     }
@@ -1109,7 +1133,9 @@ void GenerateItemPool() {
     AddItemToMainPool(SHADOW_TEMPLE_BOSS_KEY);
   }
 
-  if (GanonsBossKey.Value<uint8_t>() >= GANONSBOSSKEY_LACS_VANILLA) {
+  if (GanonsBossKey.Is(GANONSBOSSKEY_FINAL_GS_REWARD)) {
+    PlaceItemInLocation(KAK_100_GOLD_SKULLTULA_REWARD, GANONS_CASTLE_BOSS_KEY);
+  } else if (GanonsBossKey.Value<uint8_t>() >= GANONSBOSSKEY_LACS_VANILLA) {
     PlaceItemInLocation(TOT_LIGHT_ARROWS_CUTSCENE, GANONS_CASTLE_BOSS_KEY);
   } else if (GanonsBossKey.Is(GANONSBOSSKEY_VANILLA)) {
     PlaceItemInLocation(GANONS_TOWER_BOSS_KEY_CHEST, GANONS_CASTLE_BOSS_KEY);

@@ -3,7 +3,7 @@
 #include <algorithm>
 #include <string_view>
 
-#include "Utils/File.h"
+#include <Utils/DiskFile.h>
 #include "Utils/Path.h"
 #include "WarningHandler.h"
 #include "tinyxml2.h"
@@ -27,11 +27,14 @@ Globals::Globals()
 
 Globals::~Globals()
 {
-	auto& exporters = GetExporterMap();
-
-	for (auto& it : exporters)
+	for (const auto& w : workerData)
 	{
-		delete it.second;
+		delete w.second;
+	}
+	
+	if (rom != nullptr)
+	{
+		delete rom;
 	}
 }
 
@@ -119,6 +122,26 @@ void Globals::AddExternalFile(ZFile* file, int workerID)
 		workerData[workerID]->externalFiles.push_back(file);
 }
 
+void Globals::BuildAssetTexture(const fs::path& pngFilePath, TextureType texType, const fs::path& outPath)
+{
+	std::string name = outPath.stem().string();
+
+	ZTexture tex(nullptr);
+
+	if (name.find("u32") != std::string::npos)
+		tex.dWordAligned = false;
+
+	tex.FromPNG(pngFilePath.string(), texType);
+	std::string cfgPath = StringHelper::Split(pngFilePath.string(), ".")[0] + ".cfg";
+
+	if (DiskFile::Exists(cfgPath))
+		name = DiskFile::ReadAllText(cfgPath);
+
+	std::string src = tex.GetBodySourceCode();
+
+	DiskFile::WriteAllBytes(outPath.string(), src.c_str(), src.size());
+}
+
 std::map<std::string, ExporterSet*>& Globals::GetExporterMap()
 {
 	static std::map<std::string, ExporterSet*> exporters;
@@ -163,7 +186,7 @@ std::vector<uint8_t> Globals::GetBaseromFile(std::string fileName)
 
 	}
 	else
-		return File::ReadAllBytes(fileName);
+		return DiskFile::ReadAllBytes(fileName);
 }
 
 bool Globals::GetSegmentedPtrName(segptr_t segAddress, ZFile* currentFile,

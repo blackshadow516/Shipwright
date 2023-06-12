@@ -120,6 +120,10 @@ namespace Logic {
   bool ShadowTrialClear = false;
   bool LightTrialClear  = false;
 
+  //Greg
+  bool Greg = false;
+  bool GregInLogic = false;
+
   //Progressive Items
   uint8_t ProgressiveBulletBag  = 0;
   uint8_t ProgressiveBombBag    = 0;
@@ -189,7 +193,6 @@ namespace Logic {
   bool BombchuDrop      = false;
   bool AmmoCanDrop      = false;
 
-  bool BuyBombchus5     = false;
   bool BuyBombchus10    = false;
   bool BuyBombchus20    = false;
   bool BuySeed          = false;
@@ -290,12 +293,13 @@ namespace Logic {
   bool CanUseMagicArrow = false;
 
   //Bridge and LACS Requirements
-  uint8_t MedallionCount          = 0;
   uint8_t StoneCount              = 0;
+  uint8_t MedallionCount          = 0;
   uint8_t DungeonCount            = 0;
   bool HasAllStones          = false;
   bool HasAllMedallions      = false;
   bool CanBuildRainbowBridge = false;
+  bool BuiltRainbowBridge    = false;
   bool CanTriggerLACS        = false;
 
   //Other
@@ -685,7 +689,7 @@ namespace Logic {
     MasterSword     = MasterSword   || IsAdult;
     BiggoronSword   = BiggoronSword || ProgressiveGiantKnife >= 2;
 
-    ScarecrowSong    = ScarecrowSong || (ChildScarecrow && AdultScarecrow);
+    ScarecrowSong    = ScarecrowSong || FreeScarecrow || (ChildScarecrow && AdultScarecrow);
     Scarecrow        = Hookshot && CanPlay(ScarecrowSong);
     DistantScarecrow = Longshot && CanPlay(ScarecrowSong);
 
@@ -702,13 +706,13 @@ namespace Logic {
     Nuts         = DekuNutDrop || Nuts;
     Sticks       = DekuStickDrop || Sticks;
     Bugs         = HasBottle && BugsAccess;
-    BlueFire     = HasBottle && BlueFireAccess;
+    BlueFire     = (HasBottle && BlueFireAccess) || (BlueFireArrows && CanUse(ICE_ARROWS));
     Fish         = HasBottle && FishAccess;
     Fairy        = HasBottle && FairyAccess;
 
     FoundBombchus   = (BombchuDrop || Bombchus || Bombchus5 || Bombchus10 || Bombchus20);
     CanPlayBowling  = (BombchusInLogic && FoundBombchus) || (!BombchusInLogic && BombBag);
-    HasBombchus     = (BuyBombchus5 || BuyBombchus10 || BuyBombchus20 || (AmmoDrops.Is(AMMODROPS_BOMBCHU) && FoundBombchus));
+    HasBombchus     = (BuyBombchus10 || BuyBombchus20 || (AmmoDrops.Is(AMMODROPS_BOMBCHU) && FoundBombchus));
 
     HasExplosives =  Bombs || (BombchusInLogic && HasBombchus);
 
@@ -775,20 +779,22 @@ namespace Logic {
     DungeonCount          = (DekuTreeClear ? 1:0) + (DodongosCavernClear ? 1:0) + (JabuJabusBellyClear ? 1:0) + (ForestTempleClear ? 1:0) + (FireTempleClear ? 1:0) + (WaterTempleClear ? 1:0) + (SpiritTempleClear ? 1:0) + (ShadowTempleClear ? 1:0);
     HasAllStones          = StoneCount == 3;
     HasAllMedallions      = MedallionCount == 6;
+    GregInLogic           = BridgeRewardOptions.Is(BRIDGE_OPTION_GREG) || LACSRewardOptions.Is(LACS_OPTION_GREG);
 
     CanBuildRainbowBridge = Bridge.Is(RAINBOWBRIDGE_OPEN)                                                                         ||
                            (Bridge.Is(RAINBOWBRIDGE_VANILLA)    && ShadowMedallion && SpiritMedallion && LightArrows)             ||
-                           (Bridge.Is(RAINBOWBRIDGE_STONES)     && StoneCount >= BridgeStoneCount.Value<uint8_t>())                    ||
-                           (Bridge.Is(RAINBOWBRIDGE_MEDALLIONS) && MedallionCount >= BridgeMedallionCount.Value<uint8_t>())            ||
-                           (Bridge.Is(RAINBOWBRIDGE_REWARDS)    && StoneCount + MedallionCount >= BridgeRewardCount.Value<uint8_t>())  ||
-                           (Bridge.Is(RAINBOWBRIDGE_DUNGEONS)   && DungeonCount >= BridgeDungeonCount.Value<uint8_t>())                ||
-                           (Bridge.Is(RAINBOWBRIDGE_TOKENS)     && GoldSkulltulaTokens >= BridgeTokenCount.Value<uint8_t>());
+                           (Bridge.Is(RAINBOWBRIDGE_STONES)     && StoneCount + (Greg && GregInLogic ? 1 : 0) >= BridgeStoneCount.Value<uint8_t>())                    ||
+                           (Bridge.Is(RAINBOWBRIDGE_MEDALLIONS) && MedallionCount + (Greg && GregInLogic ? 1 : 0) >= BridgeMedallionCount.Value<uint8_t>())            ||
+                           (Bridge.Is(RAINBOWBRIDGE_REWARDS)    && StoneCount + MedallionCount + (Greg && GregInLogic ? 1 : 0) >= BridgeRewardCount.Value<uint8_t>())  ||
+                           (Bridge.Is(RAINBOWBRIDGE_DUNGEONS)   && DungeonCount + (Greg && GregInLogic ? 1 : 0) >= BridgeDungeonCount.Value<uint8_t>())                ||
+                           (Bridge.Is(RAINBOWBRIDGE_TOKENS)     && GoldSkulltulaTokens >= BridgeTokenCount.Value<uint8_t>()) ||
+                           (Bridge.Is(RAINBOWBRIDGE_GREG)       && Greg);
 
     CanTriggerLACS = (LACSCondition == LACSCONDITION_VANILLA    && ShadowMedallion && SpiritMedallion)                          ||
-                     (LACSCondition == LACSCONDITION_STONES     && StoneCount >= LACSStoneCount.Value<uint8_t>())                    ||
-                     (LACSCondition == LACSCONDITION_MEDALLIONS && MedallionCount >= LACSMedallionCount.Value<uint8_t>())            ||
-                     (LACSCondition == LACSCONDITION_REWARDS    && StoneCount + MedallionCount >= LACSRewardCount.Value<uint8_t>())  ||
-                     (LACSCondition == LACSCONDITION_DUNGEONS   && DungeonCount >= LACSDungeonCount.Value<uint8_t>())                ||
+                     (LACSCondition == LACSCONDITION_STONES     && StoneCount + (Greg && GregInLogic ? 1 : 0) >= LACSStoneCount.Value<uint8_t>())                    ||
+                     (LACSCondition == LACSCONDITION_MEDALLIONS && MedallionCount + (Greg && GregInLogic ? 1 : 0) >= LACSMedallionCount.Value<uint8_t>())            ||
+                     (LACSCondition == LACSCONDITION_REWARDS    && StoneCount + MedallionCount + (Greg && GregInLogic ? 1 : 0) >= LACSRewardCount.Value<uint8_t>())  ||
+                     (LACSCondition == LACSCONDITION_DUNGEONS   && DungeonCount + (Greg && GregInLogic ? 1 : 0) >= LACSDungeonCount.Value<uint8_t>())                ||
                      (LACSCondition == LACSCONDITION_TOKENS     && GoldSkulltulaTokens >= LACSTokenCount.Value<uint8_t>());
 
   }
@@ -999,6 +1005,9 @@ namespace Logic {
      ShadowTrialClear = false;
      LightTrialClear  = false;
 
+     //Greg
+     Greg = false;
+
      //Progressive Items
      ProgressiveBulletBag  = 0;
      ProgressiveBombBag    = 0;
@@ -1067,7 +1076,6 @@ namespace Logic {
      FairyPond        = false;
      BombchuDrop      = false;
 
-     BuyBombchus5     = false;
      BuyBombchus10    = false;
      BuyBombchus20    = false;
      BuySeed          = false;
@@ -1166,6 +1174,7 @@ namespace Logic {
      HasAllStones          = false;
      HasAllMedallions      = false;
      CanBuildRainbowBridge = false;
+     BuiltRainbowBridge    = false;
      CanTriggerLACS        = false;
 
      //Other

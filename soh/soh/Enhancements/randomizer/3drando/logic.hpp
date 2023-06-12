@@ -113,6 +113,9 @@ extern bool SpiritTrialClear;
 extern bool ShadowTrialClear;
 extern bool LightTrialClear;
 
+//Greg
+extern bool Greg;
+
 // Progression Items
 extern uint8_t ProgressiveBulletBag;
 extern uint8_t ProgressiveBombBag;
@@ -181,7 +184,6 @@ extern bool FreeFairies;
 extern bool FairyPond;
 extern bool BombchuDrop;
 
-extern bool BuyBombchus5;
 extern bool BuyBombchus10;
 extern bool BuyBombchus20;
 extern bool BuyArrow;
@@ -284,6 +286,7 @@ extern bool CanUseMagicArrow;
 extern bool HasAllStones;
 extern bool HasAllMedallions;
 extern bool CanBuildRainbowBridge;
+extern bool BuiltRainbowBridge;
 extern bool CanTriggerLACS;
 
 // Other

@@ -3,6 +3,7 @@
 #include <array>
 #include <string>
 #include <string_view>
+#include <cstdint>
 
 using RandomizerHash = std::array<std::string, 5>;
 
@@ -24,6 +25,9 @@ typedef enum {
     SPOILER_CHK_POE_POINTS,
     SPOILER_CHK_SHOP_ITEM,
     SPOILER_CHK_MAGIC_BEANS,
+    SPOILER_CHK_MERCHANT,
+    SPOILER_CHK_GRAVEDIGGER,
+    SPOILER_CHK_RANDOMIZER_INF,
 } SpoilerCollectionCheckType;
 
 // Location groups for checks, used to group the checks by logical location
